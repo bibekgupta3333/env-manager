@@ -815,6 +815,307 @@ $ envs gc --confirm
 
 ---
 
+## Architecture Diagrams
+
+### 1. Publishing Pipeline
+
+```
+                         PUBLISHING PIPELINE
+                         ═══════════════════
+
+  ┌─────────────────────────────────────────────────────────────────────┐
+  │                         DEVELOPMENT FLOW                             │
+  │                                                                      │
+  │  feature/xyz ──▶ PR ──▶ dev ──▶ PR ──▶ main                        │
+  │                     │              │                                 │
+  │                     ▼              ▼                                 │
+  │               CI: test only   CI: test + build                       │
+  │               (3 OS × 3 Py)   (3 OS × 3 Py + binary artifact)       │
+  │                                                                      │
+  └─────────────────────────────────────────────────────────────────────┘
+                                     │
+                                     │ git tag v0.2.0
+                                     ▼
+  ┌─────────────────────────────────────────────────────────────────────┐
+  │                         RELEASE PIPELINE                             │
+  │                                                                      │
+  │  Tag push (v*)                                                       │
+  │       │                                                              │
+  │       ├──▶ 1. Build sdist + wheel                                   │
+  │       │       └──▶ Publish to PyPI (OIDC trusted publishing)        │
+  │       │              └──▶ pip install env-manager                   │
+  │       │                                                              │
+  │       ├──▶ 2. Build PyInstaller binaries                            │
+  │       │       ├──▶ ubuntu-latest → envs-linux.tar.gz                │
+  │       │       ├──▶ macos-latest   → envs-macos.tar.gz               │
+  │       │       └──▶ windows-latest → envs-windows.tar.gz             │
+  │       │                                                              │
+  │       └──▶ 3. Create GitHub Release                                 │
+  │               ├──▶ Changelog from git log (since prev tag)          │
+  │               ├──▶ Attach all 3 platform binaries                   │
+  │               └──▶ Mark as pre-release if rc/beta/alpha in tag      │
+  │                                                                      │
+  └─────────────────────────────────────────────────────────────────────┘
+
+  RELEASE DRAFTER (runs on every push to main):
+  ┌─────────────────────────────────────────────────────────────────────┐
+  │  Merged PRs ──▶ Categorize by label ──▶ Draft release notes        │
+  │                                                                      │
+  │  feature  → "🚀 Features"                                           │
+  │  fix/bug  → "🐛 Bug Fixes"                                          │
+  │  chore/ci → "🧰 Maintenance"                                        │
+  │  deps     → "📦 Dependencies"                                       │
+  └─────────────────────────────────────────────────────────────────────┘
+
+  VERSION BUMP:
+  ┌─────────────────────────────────────────────────────────────────────┐
+  │  make bump-patch  → 0.1.0 → 0.1.1  (auto-commit + tag)            │
+  │  make bump-minor  → 0.1.0 → 0.2.0                                  │
+  │  make bump-major  → 0.1.0 → 1.0.0                                  │
+  │                                                                      │
+  │  Updates: pyproject.toml + env_manager/__init__.py                  │
+  └─────────────────────────────────────────────────────────────────────┘
+```
+
+### 2. Use Case Flows
+
+#### Use Case A: First-Time User — Discover What's on My Machine
+
+```
+  USER ACTION                    SYSTEM ACTION                    STATE
+  ────────────                   ──────────────                   ─────
+                                  
+  $ envs scan                    loads all enabled adapters
+       │                         walks filesystem
+       │                         adapter.detect() on each dir
+       │                         ─────────────────────────
+       ▼                         stores in SQLite:
+  Found 47 envs (32 GB)          · 47 environments
+                                 · 32 projects
+                                 · 4 languages
+                                 
+  $ envs list --by-project       reads from SQLite
+       │                         enriches with project names
+       ▼                         
+  ┌─────────────────────────────────────────────────────────────┐
+  │ Project          Lang    Version   Size    Last Used  Health│
+  │ myapp-api        python  3.12.1    520 MB  2 hrs ago  ✓     │
+  │ myapp-frontend   node    20.10.0   890 MB  1 day ago  ✓     │
+  │ old-scraper      python  3.8.5     980 MB  8 mo ago   ✗     │
+  │ ...                                                        │
+  └─────────────────────────────────────────────────────────────┘
+  
+  $ envs doctor old-scraper       adapter.check_health()
+       │                          · python binary missing
+       ▼                          · env is unrecoverable
+  ✗ old-scraper: broken
+    → has snapshot, run: envs lifecycle restore old-scraper
+```
+
+#### Use Case B: Daily Workflow — Create, Use, Save
+
+```
+  $ cd ~/projects/new-api
+  
+  $ envs lifecycle create python@3.12 --confirm
+       │                          adapter.create()
+       │                          python3.12 -m venv .venv
+       ▼                          stores in SQLite
+  Created: /home/user/projects/new-api/.venv
+  
+  $ envs lifecycle install new-api fastapi uvicorn --dry-run
+       │                          adapter.install() not called
+       ▼                          shows: would install 2 packages
+  Would install: fastapi==0.115.0, uvicorn==0.30.0
+  
+  $ envs lifecycle install new-api fastapi uvicorn --confirm
+       │                          adapter.install(["fastapi","uvicorn"])
+       ▼                          pip install fastapi uvicorn
+  Installed 2 packages
+  
+  $ eval "$(envs lifecycle activate new-api)"
+       │                          prints: source /path/to/.venv/bin/activate
+       ▼                          shell evaluates, env is active
+  (new-api) $ python -c "import fastapi; print('ok')"
+  ok
+```
+
+#### Use Case C: Clean Up at Scale — Free Space, Stay Safe
+
+```
+  $ envs list --stale --orphaned
+       │                          SQL: stale > 30 days OR is_orphaned
+       ▼                          
+  23 environments flagged (8.4 GB)
+  
+  $ envs cleanup --stale 60 --snapshot --dry-run
+       │                          evaluates cleanup rules
+       │                          skips: pinned projects
+       │                          skips: locked (process holds file)
+       ▼
+  Would snapshot + remove 18 environments
+  Would free: 6.2 GB
+  3 skipped — pinned
+  
+  $ envs cleanup --stale 60 --snapshot --confirm
+       │                          for each env:
+       │                          1. adapter.freeze() → snapshot
+       │                          2. store snapshot in SQLite (v1, v2...)
+       │                          3. rmtree() the directory
+       │                          4. update_state() → SNAPSHOTTED
+       │                          5. activity_log: "cleaned_up"
+       ▼
+  Removed 18 envs. Freed 6.2 GB.
+  Snapshots saved: 18 (restorable)
+  
+  ... 3 months later, need old-scraper again ...
+  
+  $ envs snapshots
+       │
+       ▼
+  v1  python  23 pkgs  old-scraper  2026-03-15
+  
+  $ envs lifecycle restore old-scraper --confirm
+       │                          1. read snapshot from SQLite
+       │                          2. adapter.create() → new venv
+       │                          3. adapter.install(frozen_deps)
+       │                          4. update_state() → READY
+       ▼
+  Restored: old-scraper (23 packages, 18.3s)
+  
+  $ eval "$(envs lifecycle activate old-scraper)"
+  (old-scraper) $ # back in business
+```
+
+#### Use Case D: Dashboard — Visual Browsing at Scale
+
+```
+  BROWSER                          DAEMON                         DB
+  ───────                          ──────                         ──
+  
+  open http://localhost:9876
+       │
+       │  GET /                     FileResponse(index.html)
+       ▼                           ────────────────────────
+  Dashboard loads (SPA)
+       │
+       │  GET /api/envs             EnvironmentRepository.list_all()
+       ▼                           ───────────────────────────────
+  Envs tab: 47 envs, 32 GB
+  4 summary cards
+  searchable/filterable table
+       │
+       │  GET /api/plugins          AdapterRegistry.list_all()
+       ▼                           ────────────────────────────
+  Plugins: 6 adapters shown
+       │
+       │  WS /ws/events             connect
+       ▼                           ───────
+  Status: live                     push events on scan/cleanup
+```
+
+### 3. Data Flow — Key Operations
+
+#### Scan → Persist
+
+```
+  CLI: envs scan --path ~/projects
+       │
+       ▼
+  Scanner._walk(root, depth)
+       │
+       │  for each directory:
+       │    for each adapter:
+       │      adapter.detect(dir)
+       │
+       │  returns: [EnvMetadata, EnvMetadata, ...]
+       │
+       ▼
+  Scanner._persist(meta)
+       │
+       ├──▶ ProjectRepository.get_or_create()
+       │       └──▶ INSERT INTO projects
+       │
+       ├──▶ EnvironmentRepository.get_by_path()
+       │       └──▶ EXISTS? → mark_scanned() + update_size()
+       │
+       └──▶ EnvironmentRepository.insert()
+               └──▶ INSERT INTO environments
+                    INSERT INTO packages (per env)
+                    ActivityRepository.log("discovered")
+```
+
+#### Snapshot → Delete → Restore
+
+```
+  DELETE WITH SNAPSHOT:
+  
+  envs lifecycle remove myproject --snapshot --confirm
+       │
+       ├──▶ 1. adapter.freeze(path)
+       │       └──▶ pip freeze / npm list / gem list
+       │           returns: FreezeResult(raw_content, format, packages)
+       │
+       ├──▶ 2. SnapshotRepository.insert()
+       │       └──▶ INSERT INTO snapshots (env_id, version, frozen_deps, ...)
+       │           version = auto-incremented (1, 2, 3...)
+       │
+       ├──▶ 3. EnvironmentRepository.update_state(SNAPSHOTTED)
+       │
+       ├──▶ 4. shutil.rmtree(env_path)
+       │
+       └──▶ 5. ActivityRepository.log("removed")
+  
+  
+  RESTORE:
+  
+  envs lifecycle restore myproject --confirm
+       │
+       ├──▶ 1. SnapshotRepository.list_all()
+       │       └──▶ find matching env by path/name/project
+       │
+       ├──▶ 2. adapter.create(env_path, {version})
+       │       └──▶ python3 -m venv /path/to/.venv
+       │
+       ├──▶ 3. adapter.install(env_path, frozen_deps.keys())
+       │       └──▶ pip install requests flask ...
+       │
+       ├──▶ 4. EnvironmentRepository.update_state(READY)
+       │
+       └──▶ 5. ActivityRepository.log("restored")
+```
+
+### 4. Component Interaction Map
+
+```
+  ┌──────────┐     ┌──────────┐     ┌──────────────┐
+  │   CLI    │────▶│  Daemon  │────▶│   Storage    │
+  │ (typer)  │     │ (FastAPI)│     │  (SQLite)    │
+  └──────────┘     └──────────┘     └──────────────┘
+       │                │                   │
+       │                │                   │
+       ▼                ▼                   ▼
+  ┌──────────┐     ┌──────────┐     ┌──────────────┐
+  │ stdout   │     │Dashboard │     │   Models     │
+  │ (rich)   │     │ (HTML)   │     │(dataclasses) │
+  └──────────┘     └──────────┘     └──────────────┘
+                         │
+  ┌──────────────────────┼──────────────────────┐
+  │                 Adapter Layer                │
+  │  ┌────────┐ ┌────────┐ ┌────────┐ ┌───────┐│
+  │  │ Python │ │  Node  │ │  Ruby  │ │  Go   ││
+  │  │ ·venv  │ │ ·nvm   │ │ ·rbenv │ │·goenv ││
+  │  │ ·poetry│ │ ·fnm   │ └────────┘ └───────┘│
+  │  └────────┘ └────────┘         ┌──────────┐ │
+  │                    ┌────────┐  │  Rust    │ │
+  │                    │Community│  │ ·rustup  │ │
+  │                    │Plugins  │  └──────────┘ │
+  │                    └────────┘                │
+  └──────────────────────────────────────────────┘
+```
+
+---
+
 ## Design Decisions Log
 
 | Decision | Rationale |
@@ -830,3 +1131,47 @@ $ envs gc --confirm
 | WAL mode on SQLite | One PRAGMA converts single-writer to concurrent reads+writes. No reason not to. |
 | Smart scan exclusions | Walking /usr finds 10,000 false positives. Exclude known system paths by default. |
 | Per-language tracking | Users choose which languages to track. Disable Node adapter = no .nvmrc scanning. Reduces scan time, DB size, and noise. |
+
+---
+
+## Critical Review — Known Gaps & Mitigations
+
+Self-assessment of what's missing, what's risky, and what's planned.
+
+### Fixed Before Shipping (v0.1)
+
+| # | Gap | Fix Applied |
+|---|-----|-------------|
+| 1 | Release workflow had no test gate — broken tag could ship to PyPI | Added `test` job as `needs` dependency before `pypi` publish. Tagged commit must pass lint + typecheck + pytest before publishing. |
+| 2 | Activate prints raw eval output — confusing to new users | Terminal detection: if stdout is a TTY, print "Run: eval \"\$(envs lifecycle activate <p>)\"" instead of raw output. |
+| 3 | Scanner didn't persist to DB — scan results lost between runs | `Scanner._persist()` now inserts/updates environments into SQLite on every scan. |
+
+### Accepted Gaps (v0.2+)
+
+| # | Gap | Risk | Mitigation |
+|---|-----|------|------------|
+| 1 | **No pre-release staging** — binary built on dev branch isn't tested before merge to main | Broken binary could ship if dev build passes but binary fails | Add canary test in v0.2: download artifact, smoke-test on each OS |
+| 2 | **No Homebrew tap** — macOS users expect `brew install env-manager` | Adoption friction for macOS-only devs | v0.2: create homebrew formula in separate tap repo |
+| 3 | **No Windows installer** — just a .tar.gz | Windows users don't know how to use .tar.gz | v0.2: build .msi or .exe installer with NSIS/WiX |
+| 4 | **Scan is always full** — no incremental mode | 1000+ env scan takes minutes every time | v0.2: scan only dirs with mtime changes since last scan |
+| 5 | **No cross-machine sync** — snapshots live in local SQLite | Lose snapshot history when switching machines | v0.2: `envs db push/pull` to git-based backup |
+| 6 | **Activate doesn't work in all shells** — needs `eval` wrapper in bash/zsh | User runs `envs lifecycle activate` directly, sees raw source command | Clear TTY detection + documentation |
+| 7 | **Dashboard is HTML-only** — no React/Vue build step, inline JS | Harder to maintain, no component framework | v0.2: migrate to Vite + React; keep serving as static files |
+
+### Architecture Risks
+
+| Risk | Likelihood | Impact | Mitigation |
+|------|:----------:|:------:|------------|
+| SQLite corruption on crash during write | Low | High — lose all env metadata | WAL mode + `envs db backup` + auto-rebuild from filesystem (v0.2) |
+| Adapter subprocess hangs (pip install timeout) | Medium | Low — CLI blocks | All subprocess calls have 30-120s timeout |
+| Scanner hits permission errors in system dirs | High | Low — noisy but safe | Smart exclusions skip /usr, /System, /proc |
+| Shell hook breaks user's .bashrc | Low | High — trust destroyed forever | Hooks are **opt-in only**; never auto-modify rc files |
+
+### What We Chose NOT To Build
+
+| Feature | Why Not |
+|---------|---------|
+| Docker-based isolation | Different paradigm; env-manager is lightweight local-first. Use Docker if you need containers. |
+| Cloud-hosted dashboard | Privacy risk; all data stays local. Dashboard is localhost-only. |
+| Auto-commit/push of snapshots | Breaks user autonomy; snapshots are local by design. Manual `envs db backup` for portability. |
+| GUI desktop app | Unnecessary; CLI + localhost dashboard covers all use cases. Electron would bloat the binary 10x. |

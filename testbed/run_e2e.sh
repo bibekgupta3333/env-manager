@@ -12,9 +12,8 @@ export ENVS_DB_PATH="$SCRIPT_DIR/test_e2e.db"
 
 PASS=0
 FAIL=0
-RED='\033[0;31m'
 GREEN='\033[0;32m'
-YELLOW='\033[1;33m'
+RED='\033[0;31m'
 NC='\033[0m'
 
 # ── helpers ──────────────────────────────────────────────

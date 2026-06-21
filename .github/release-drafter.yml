@@ -1,0 +1,56 @@
+# Release Drafter — auto-generates release notes from PR labels
+# https://github.com/release-drafter/release-drafter
+
+name-template: 'v$RESOLVED_VERSION'
+tag-template: 'v$RESOLVED_VERSION'
+
+categories:
+  - title: '🚀 Features'
+    labels:
+      - 'feature'
+      - 'enhancement'
+  - title: '🐛 Bug Fixes'
+    labels:
+      - 'fix'
+      - 'bugfix'
+      - 'bug'
+  - title: '🧰 Maintenance'
+    labels:
+      - 'chore'
+      - 'ci'
+      - 'docs'
+      - 'refactor'
+      - 'test'
+  - title: '📦 Dependencies'
+    labels:
+      - 'dependencies'
+
+change-template: '- $TITLE @$AUTHOR (#$NUMBER)'
+change-title-escapes: '\<*_&'
+
+version-resolver:
+  major:
+    labels:
+      - 'major'
+      - 'breaking'
+  minor:
+    labels:
+      - 'minor'
+      - 'feature'
+  patch:
+    labels:
+      - 'patch'
+      - 'fix'
+      - 'bugfix'
+      - 'chore'
+      - 'docs'
+      - 'ci'
+      - 'refactor'
+      - 'test'
+      - 'dependencies'
+  default: patch
+
+template: |
+  ## What's Changed
+
+  $CHANGES

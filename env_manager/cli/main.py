@@ -5,7 +5,9 @@ import typer
 from env_manager.cli.commands import (
     cleanup_cmd,
     config,
+    db_cmd,
     doctor_cmd,
+    hook_cmd,
     info,
     lifecycle,
     list_cmd,
@@ -29,6 +31,8 @@ app.add_typer(lifecycle.app, name="lifecycle", help="Create, install, update, de
 app.add_typer(doctor_cmd.app, name="doctor")
 app.add_typer(snapshots_cmd.app, name="snapshots")
 app.add_typer(cleanup_cmd.app, name="cleanup")
+app.add_typer(hook_cmd.app, name="hook")
+app.add_typer(db_cmd.app, name="db")
 
 
 def main() -> None:

@@ -5,7 +5,25 @@ build-backend = "hatchling.build"
 [project]
 name = "env-manager"
 version = "0.1.0"
-description = "Cross-language virtual environment manager"
+description = "Cross-language virtual environment manager — discover, manage, health-check, snapshot, and clean up Python, Node, Ruby, Go, and Rust environments"
+readme = "README.md"
+license = {text = "MIT"}
+authors = [
+    {name = "env-manager contributors"}
+]
+keywords = ["virtualenv", "venv", "nvm", "rbenv", "environment", "dev-tools", "cli"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Software Development :: Build Tools",
+    "Topic :: System :: Systems Administration",
+]
 requires-python = ">=3.10"
 dependencies = [
     "fastapi>=0.115.0",
@@ -25,6 +43,11 @@ dev = [
     "mypy>=1.10",
 ]
 
+[project.urls]
+Homepage = "https://github.com/bibekgupta3333/env-manager"
+Repository = "https://github.com/bibekgupta3333/env-manager"
+Issues = "https://github.com/bibekgupta3333/env-manager/issues"
+
 [project.scripts]
 envs = "env_manager.cli.main:app"
 
@@ -40,6 +63,9 @@ ignore = ["B008", "B904"]
 "env_manager/cli/commands/lifecycle.py" = ["E501"]
 "env_manager/cli/commands/doctor_cmd.py" = ["E501"]
 "env_manager/cli/commands/cleanup_cmd.py" = ["E501"]
+"env_manager/cli/commands/db_cmd.py" = ["E501"]
+"env_manager/cli/commands/hook_cmd.py" = ["E501"]
+"env_manager/cli/commands/scan.py" = ["E501"]
 "env_manager/cli/main.py" = ["E501"]
 "env_manager/daemon/*.py" = ["E501"]
 "env_manager/daemon/api/*.py" = ["E501"]
@@ -55,7 +81,7 @@ module = ["apscheduler.*", "apscheduler.schedulers.background"]
 ignore_missing_imports = true
 
 [[tool.mypy.overrides]]
-module = ["env_manager.daemon.*", "env_manager.daemon.api.*", "env_manager.cli.commands.lifecycle", "env_manager.cli.commands.snapshots_cmd", "env_manager.cli.commands.cleanup_cmd", "env_manager.cli.commands.doctor_cmd"]
+module = ["env_manager.daemon.*", "env_manager.daemon.api.*", "env_manager.cli.commands.lifecycle", "env_manager.cli.commands.snapshots_cmd", "env_manager.cli.commands.cleanup_cmd", "env_manager.cli.commands.doctor_cmd", "env_manager.cli.commands.hook_cmd", "env_manager.cli.commands.db_cmd"]
 disable_error_code = ["no-untyped-def", "attr-defined", "no-untyped-call"]
 
 [tool.pytest.ini_options]

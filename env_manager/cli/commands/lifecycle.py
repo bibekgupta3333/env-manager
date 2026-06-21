@@ -4,6 +4,7 @@ import json
 import os
 import shutil
 import subprocess as sp
+import sys
 from pathlib import Path
 
 import typer
@@ -487,22 +488,45 @@ def activate(
     try:
         env = _resolve(conn, project)
         if not env:
-            typer.echo("echo 'Not found' >&2; return 1")
+            if sys.stdout.isatty():
+                typer.echo(f"Environment not found: {project}", err=True)
+                typer.echo("")
+                typer.echo("To discover environments, run: envs scan")
+            else:
+                typer.echo("echo 'Environment not found' >&2; return 1")
             raise typer.Exit(1)
 
         lang = env["language"]
         env_path = Path(env["path"])
+        activate_line = ""
 
         if lang == "python":
             activate_script = env_path / "bin" / "activate"
             if activate_script.exists():
-                typer.echo(f"source {activate_script}")
-            else:
-                typer.echo("echo 'No activate script' >&2; return 1")
+                activate_line = f"source {activate_script}"
         elif lang == "node":
-            typer.echo(f"export PATH='{env_path}/bin:$PATH'")
+            activate_line = f"export PATH='{env_path}/bin:$PATH'"
+
+        if not activate_line:
+            msg = f"echo 'No activation support for {lang}' >&2; return 1"
+            typer.echo(msg)
+            raise typer.Exit(1)
+
+        # TTY detection: if user ran this interactively, show help
+        if sys.stdout.isatty():
+            typer.echo("  To activate in your current shell, run:")
+            typer.echo("")
+            typer.echo(f"    eval \"$(envs lifecycle activate {project})\"")
+            typer.echo("")
+            typer.echo("  Or spawn a subshell:")
+            typer.echo("")
+            typer.echo(f"    envs lifecycle shell {project}")
+            typer.echo("")
+            typer.echo(f"  The activation command for {lang} is:")
+            typer.echo(f"    {activate_line}")
         else:
-            typer.echo(f"echo 'No activation for {lang}' >&2; return 1")
+            # Non-TTY: output the eval-able command directly
+            typer.echo(activate_line)
     finally:
         conn.close()
         close_connection(db_path)

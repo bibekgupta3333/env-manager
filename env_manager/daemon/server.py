@@ -7,8 +7,14 @@ from fastapi import FastAPI
 from fastapi.responses import FileResponse
 
 from env_manager.cli.db_utils import ensure_db_dir, get_db_path
-from env_manager.daemon.api import (envs_api, health_api, plugins_api,
-                                     projects_api, snapshots_api, ws_api)
+from env_manager.daemon.api import (
+    envs_api,
+    health_api,
+    plugins_api,
+    projects_api,
+    snapshots_api,
+    ws_api,
+)
 from env_manager.daemon.scheduler import start_scheduler, stop_scheduler
 from env_manager.storage.database import init_db
 

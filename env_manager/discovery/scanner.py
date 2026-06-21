@@ -27,13 +27,24 @@ class Scanner:
         self.proj_repo = ProjectRepository(conn)
         self.activity_repo = ActivityRepository(conn)
 
-    def scan(self, root_path: str, depth: int = 5) -> list[EnvMetadata]:
+    def scan(self, root_path: str, depth: int = 5, incremental: bool = False) -> list[EnvMetadata]:
         root = Path(root_path).expanduser().resolve()
         if not root.exists():
             return []
 
+        # Get last scan time for incremental mode
+        last_scan: str | None = None
+        if incremental:
+            last_scan = self._get_last_scan_time()
+
         results: list[EnvMetadata] = []
-        self._walk(root, depth, results)
+        self._walk(root, depth, results, last_scan)
+
+        # Record this scan
+        self.activity_repo.log(
+            event="scan_started",
+            detail={"root": str(root), "incremental": incremental},
+        )
 
         # Persist to database
         for meta in results:
@@ -44,6 +55,13 @@ class Scanner:
             detail={"envs_found": len(results), "root": str(root)},
         )
         return results
+
+    def _get_last_scan_time(self) -> str | None:
+        """Get the timestamp of the most recent scan from activity_log."""
+        row = self.conn.execute(
+            "SELECT MAX(timestamp) FROM activity_log WHERE event = 'scan_completed'"
+        ).fetchone()
+        return row[0] if row and row[0] else None
 
     def _persist(self, meta: EnvMetadata) -> None:
         """Store discovered environment in the database."""
@@ -87,7 +105,8 @@ class Scanner:
             detail={"path": str(env_path), "language": meta.language},
         )
 
-    def _walk(self, directory: Path, remaining_depth: int, results: list[EnvMetadata]) -> None:
+    def _walk(self, directory: Path, remaining_depth: int, results: list[EnvMetadata],
+              last_scan: str | None = None) -> None:
         if remaining_depth <= 0:
             return
 
@@ -97,6 +116,17 @@ class Scanner:
         path_str = str(directory)
         if any(path_str.startswith(p) for p in SYSTEM_PREFIXES):
             return
+
+        # Incremental: skip directories older than last scan
+        if last_scan:
+            try:
+                dir_mtime = directory.stat().st_mtime
+                from datetime import datetime
+                scan_dt = datetime.fromisoformat(last_scan)
+                if dir_mtime < scan_dt.timestamp():
+                    return
+            except (OSError, ValueError):
+                pass
 
         for adapter in self.adapters:
             try:

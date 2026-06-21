@@ -20,6 +20,7 @@ _DEPTH_OPTION = typer.Option(5, "--depth", "-d", help="Max directory depth")
 def scan(
     path: list[str] = _PATH_OPTION,
     depth: int = _DEPTH_OPTION,
+    incremental: bool = typer.Option(False, "--incremental", "-i", help="Only scan directories changed since last scan"),
 ) -> None:
     """Discover all language environments."""
     ensure_db_dir()
@@ -41,8 +42,11 @@ def scan(
 
         for p in scan_paths:
             resolved = str(Path(p).expanduser())
-            typer.echo(f"Scanning {resolved}...")
-            results = scanner.scan(resolved, depth=depth)
+            if incremental:
+                typer.echo(f"Incremental scan of {resolved}...")
+            else:
+                typer.echo(f"Scanning {resolved}...")
+            results = scanner.scan(resolved, depth=depth, incremental=incremental)
             typer.echo(f"  Found {len(results)} environments")
     finally:
         conn.close()
