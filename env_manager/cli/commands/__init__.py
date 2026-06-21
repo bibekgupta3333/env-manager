@@ -1,5 +1,25 @@
 """CLI command modules."""
 
-from env_manager.cli.commands import config, info, list_cmd, plugin, scan
+from env_manager.cli.commands import (
+    cleanup_cmd,
+    config,
+    doctor_cmd,
+    info,
+    lifecycle,
+    list_cmd,
+    plugin,
+    scan,
+    snapshots_cmd,
+)
 
-__all__ = ["scan", "list_cmd", "info", "plugin", "config"]
+__all__ = [
+    "scan",
+    "list_cmd",
+    "info",
+    "plugin",
+    "config",
+    "lifecycle",
+    "doctor_cmd",
+    "snapshots_cmd",
+    "cleanup_cmd",
+]

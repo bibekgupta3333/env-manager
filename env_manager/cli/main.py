@@ -2,7 +2,17 @@
 
 import typer
 
-from env_manager.cli.commands import config, info, lifecycle, list_cmd, plugin, scan
+from env_manager.cli.commands import (
+    cleanup_cmd,
+    config,
+    doctor_cmd,
+    info,
+    lifecycle,
+    list_cmd,
+    plugin,
+    scan,
+    snapshots_cmd,
+)
 
 app = typer.Typer(
     name="envs",
@@ -16,6 +26,9 @@ app.add_typer(info.app, name="info")
 app.add_typer(plugin.app, name="plugins")
 app.add_typer(config.app, name="config")
 app.add_typer(lifecycle.app, name="lifecycle", help="Create, install, update, delete, restore environments")
+app.add_typer(doctor_cmd.app, name="doctor")
+app.add_typer(snapshots_cmd.app, name="snapshots")
+app.add_typer(cleanup_cmd.app, name="cleanup")
 
 
 def main() -> None:
