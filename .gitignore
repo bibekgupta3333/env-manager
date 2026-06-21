@@ -12,3 +12,8 @@ build/
 node_modules/
 .DS_Store
 .superpowers/
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+.coverage
+htmlcov/
