@@ -58,4 +58,7 @@ async def dashboard():
     index = DASHBOARD_DIR / "index.html"
     if index.exists():
         return FileResponse(index)
-    return {"message": "Dashboard not available", "hint": "check DASHBOARD_DIR"}
+    return {
+        "message": "Dashboard not available",
+        "hint": "check DASHBOARD_DIR",
+    }

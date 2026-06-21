@@ -27,7 +27,11 @@ app.add_typer(list_cmd.app, name="list")
 app.add_typer(info.app, name="info")
 app.add_typer(plugin.app, name="plugins")
 app.add_typer(config.app, name="config")
-app.add_typer(lifecycle.app, name="lifecycle", help="Create, install, update, delete, restore environments")
+app.add_typer(
+    lifecycle.app,
+    name="lifecycle",
+    help="Create, install, update, delete, restore environments",
+)
 app.add_typer(doctor_cmd.app, name="doctor")
 app.add_typer(snapshots_cmd.app, name="snapshots")
 app.add_typer(cleanup_cmd.app, name="cleanup")

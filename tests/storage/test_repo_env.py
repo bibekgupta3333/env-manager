@@ -1,7 +1,11 @@
 """Tests for EnvironmentRepository."""
 
 from env_manager.models.states import DiscoveryStatus, ManagementState
-from env_manager.storage.database import close_connection, get_connection, init_db
+from env_manager.storage.database import (
+    close_connection,
+    get_connection,
+    init_db,
+)
 from env_manager.storage.repo_env import EnvironmentRepository
 from env_manager.storage.repo_project import ProjectRepository
 
@@ -47,10 +51,22 @@ def test_list_by_language(db_path):
     conn, pid = _setup(db_path)
     repo = EnvironmentRepository(conn)
 
-    repo.insert(project_id=pid, adapter="python.venv", env_type="local",
-                path="/tmp/p1/.venv", language="python", version="3.12")
-    repo.insert(project_id=pid, adapter="node.nvm", env_type="global",
-                path="/tmp/.nvm/v20", language="node", version="20.10")
+    repo.insert(
+        project_id=pid,
+        adapter="python.venv",
+        env_type="local",
+        path="/tmp/p1/.venv",
+        language="python",
+        version="3.12",
+    )
+    repo.insert(
+        project_id=pid,
+        adapter="node.nvm",
+        env_type="global",
+        path="/tmp/.nvm/v20",
+        language="node",
+        version="20.10",
+    )
 
     python_envs = repo.list_by_language("python")
     assert len(python_envs) == 1
@@ -66,8 +82,14 @@ def test_get_by_path(db_path):
     conn, pid = _setup(db_path)
     repo = EnvironmentRepository(conn)
 
-    repo.insert(project_id=pid, adapter="python.venv", env_type="local",
-                path="/tmp/specific/.venv", language="python", version="3.12")
+    repo.insert(
+        project_id=pid,
+        adapter="python.venv",
+        env_type="local",
+        path="/tmp/specific/.venv",
+        language="python",
+        version="3.12",
+    )
 
     env = repo.get_by_path("/tmp/specific/.venv")
     assert env is not None
@@ -83,8 +105,14 @@ def test_update_state(db_path):
     conn, pid = _setup(db_path)
     repo = EnvironmentRepository(conn)
 
-    env_id = repo.insert(project_id=pid, adapter="python.venv", env_type="local",
-                         path="/tmp/p1/.venv", language="python", version="3.12")
+    env_id = repo.insert(
+        project_id=pid,
+        adapter="python.venv",
+        env_type="local",
+        path="/tmp/p1/.venv",
+        language="python",
+        version="3.12",
+    )
 
     repo.update_state(env_id, ManagementState.ERROR)
     env = repo.get_by_id(env_id)
@@ -98,9 +126,15 @@ def test_update_discovery_status(db_path):
     conn, pid = _setup(db_path)
     repo = EnvironmentRepository(conn)
 
-    env_id = repo.insert(project_id=pid, adapter="python.venv", env_type="local",
-                         path="/tmp/p1/.venv", language="python", version="3.12",
-                         discovery_status=DiscoveryStatus.UNTRACKED)
+    env_id = repo.insert(
+        project_id=pid,
+        adapter="python.venv",
+        env_type="local",
+        path="/tmp/p1/.venv",
+        language="python",
+        version="3.12",
+        discovery_status=DiscoveryStatus.UNTRACKED,
+    )
 
     repo.update_discovery_status(env_id, DiscoveryStatus.TRACKED)
     env = repo.get_by_id(env_id)
@@ -114,8 +148,14 @@ def test_touch_and_update_health(db_path):
     conn, pid = _setup(db_path)
     repo = EnvironmentRepository(conn)
 
-    env_id = repo.insert(project_id=pid, adapter="python.venv", env_type="local",
-                         path="/tmp/p1/.venv", language="python", version="3.12")
+    env_id = repo.insert(
+        project_id=pid,
+        adapter="python.venv",
+        env_type="local",
+        path="/tmp/p1/.venv",
+        language="python",
+        version="3.12",
+    )
 
     repo.touch(env_id)
     env = repo.get_by_id(env_id)
@@ -134,8 +174,14 @@ def test_delete_env(db_path):
     conn, pid = _setup(db_path)
     repo = EnvironmentRepository(conn)
 
-    env_id = repo.insert(project_id=pid, adapter="python.venv", env_type="local",
-                         path="/tmp/p1/.venv", language="python", version="3.12")
+    env_id = repo.insert(
+        project_id=pid,
+        adapter="python.venv",
+        env_type="local",
+        path="/tmp/p1/.venv",
+        language="python",
+        version="3.12",
+    )
 
     repo.delete(env_id)
     assert repo.get_by_id(env_id) is None
@@ -148,8 +194,14 @@ def test_set_orphaned(db_path):
     conn, pid = _setup(db_path)
     repo = EnvironmentRepository(conn)
 
-    env_id = repo.insert(project_id=pid, adapter="python.venv", env_type="local",
-                         path="/tmp/p1/.venv", language="python", version="3.12")
+    env_id = repo.insert(
+        project_id=pid,
+        adapter="python.venv",
+        env_type="local",
+        path="/tmp/p1/.venv",
+        language="python",
+        version="3.12",
+    )
 
     repo.set_orphaned(env_id, True)
     env = repo.get_by_id(env_id)

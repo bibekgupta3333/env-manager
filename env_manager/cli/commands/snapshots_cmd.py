@@ -5,7 +5,11 @@ import json
 import typer
 
 from env_manager.cli.db_utils import ensure_db_dir, get_db_path
-from env_manager.storage.database import close_connection, get_connection, init_db
+from env_manager.storage.database import (
+    close_connection,
+    get_connection,
+    init_db,
+)
 from env_manager.storage.repo_env import EnvironmentRepository
 from env_manager.storage.repo_snapshot import SnapshotRepository
 
@@ -27,7 +31,9 @@ def snapshots(
         all_snaps = repo.list_all()
 
         if project:
-            all_snaps = [s for s in all_snaps if project in str(s.get("language", ""))]
+            all_snaps = [
+                s for s in all_snaps if project in str(s.get("language", ""))
+            ]
 
         if not all_snaps:
             typer.echo("No snapshots found.")
@@ -50,8 +56,12 @@ def snapshots(
 @app.command()
 def prune(
     project: str = typer.Argument(None, help="Project name (omit for all)"),
-    keep: int = typer.Option(5, "--keep", "-k", help="Number of versions to keep"),
-    dry_run: bool = typer.Option(False, "--dry-run", help="Show what would be pruned"),
+    keep: int = typer.Option(
+        5, "--keep", "-k", help="Number of versions to keep"
+    ),
+    dry_run: bool = typer.Option(
+        False, "--dry-run", help="Show what would be pruned"
+    ),
     confirm: bool = typer.Option(False, "--confirm", help="Confirm pruning"),
 ) -> None:
     """Delete old snapshot versions beyond --keep most recent."""
@@ -84,13 +94,17 @@ def prune(
                 versions = repo.list_by_env(eid)
                 to_prune = max(0, len(versions) - keep)
                 if to_prune > 0:
-                    typer.echo(f"  Would prune {to_prune} versions from env #{eid}")
+                    typer.echo(
+                        f"  Would prune {to_prune} versions from env #{eid}"
+                    )
             else:
                 pruned = repo.prune(eid, keep=keep)
                 total_pruned += pruned
 
         if not dry_run:
-            typer.echo(f"Pruned {total_pruned} old snapshots (keeping {keep} per env)")
+            typer.echo(
+                f"Pruned {total_pruned} old snapshots (keeping {keep} per env)"
+            )
     finally:
         conn.close()
         close_connection(db_path)

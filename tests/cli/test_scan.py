@@ -26,6 +26,7 @@ def test_scan_finds_fake_envs(runner, tmp_path, monkeypatch):
     (py_proj / "pyvenv.cfg").write_text("version = 3.9.0\n")
 
     from env_manager.cli.commands import scan as scan_mod
+
     monkeypatch.setattr(scan_mod, "DEFAULT_SCAN_PATHS", [str(tmp_path)])
 
     result = runner.invoke(app, ["scan"])
@@ -38,6 +39,7 @@ def test_list_after_scan(runner, tmp_path, monkeypatch):
     (py_proj / "pyvenv.cfg").write_text("version = 3.12.0\n")
 
     from env_manager.cli.commands import scan as scan_mod
+
     monkeypatch.setattr(scan_mod, "DEFAULT_SCAN_PATHS", [str(tmp_path)])
 
     runner.invoke(app, ["scan"])

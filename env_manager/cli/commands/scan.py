@@ -7,7 +7,11 @@ import typer
 from env_manager.adapters.registry import AdapterRegistry
 from env_manager.cli.db_utils import ensure_db_dir, get_db_path
 from env_manager.discovery.scanner import Scanner
-from env_manager.storage.database import close_connection, get_connection, init_db
+from env_manager.storage.database import (
+    close_connection,
+    get_connection,
+    init_db,
+)
 
 app = typer.Typer()
 
@@ -20,7 +24,12 @@ _DEPTH_OPTION = typer.Option(5, "--depth", "-d", help="Max directory depth")
 def scan(
     path: list[str] = _PATH_OPTION,
     depth: int = _DEPTH_OPTION,
-    incremental: bool = typer.Option(False, "--incremental", "-i", help="Only scan directories changed since last scan"),
+    incremental: bool = typer.Option(
+        False,
+        "--incremental",
+        "-i",
+        help="Only scan directories changed since last scan",
+    ),
 ) -> None:
     """Discover all language environments."""
     ensure_db_dir()
@@ -46,7 +55,9 @@ def scan(
                 typer.echo(f"Incremental scan of {resolved}...")
             else:
                 typer.echo(f"Scanning {resolved}...")
-            results = scanner.scan(resolved, depth=depth, incremental=incremental)
+            results = scanner.scan(
+                resolved, depth=depth, incremental=incremental
+            )
             typer.echo(f"  Found {len(results)} environments")
     finally:
         conn.close()

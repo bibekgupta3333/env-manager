@@ -13,17 +13,31 @@ class SnapshotRepository:
     def __init__(self, conn: sqlite3.Connection):
         self.conn = conn
 
-    def insert(self, env_id: int, frozen_deps: dict[str, Any], raw_lockfile: str = "",
-               lockfile_format: str = "", tool_config: dict[str, Any] | None = None,
-               notes: str = "") -> tuple[int, int]:
+    def insert(
+        self,
+        env_id: int,
+        frozen_deps: dict[str, Any],
+        raw_lockfile: str = "",
+        lockfile_format: str = "",
+        tool_config: dict[str, Any] | None = None,
+        notes: str = "",
+    ) -> tuple[int, int]:
         latest = self.get_latest_version(env_id)
         version = (latest or 0) + 1
         cursor = self.conn.execute(
-            """INSERT INTO snapshots (env_id, version, frozen_deps, raw_lockfile,
-               lockfile_format, tool_config, notes)
+            """INSERT INTO snapshots
+               (env_id, version, frozen_deps, raw_lockfile,
+                lockfile_format, tool_config, notes)
                VALUES (?, ?, ?, ?, ?, ?, ?)""",
-            (env_id, version, json.dumps(frozen_deps), raw_lockfile,
-             lockfile_format, json.dumps(tool_config or {}), notes),
+            (
+                env_id,
+                version,
+                json.dumps(frozen_deps),
+                raw_lockfile,
+                lockfile_format,
+                json.dumps(tool_config or {}),
+                notes,
+            ),
         )
         self.conn.commit()
         assert cursor.lastrowid is not None
@@ -35,7 +49,9 @@ class SnapshotRepository:
         ).fetchone()
         return row[0] if row else None
 
-    def get_by_env_and_version(self, env_id: int, version: int) -> sqlite3.Row | None:
+    def get_by_env_and_version(
+        self, env_id: int, version: int
+    ) -> sqlite3.Row | None:
         return self.conn.execute(
             "SELECT * FROM snapshots WHERE env_id = ? AND version = ?",
             (env_id, version),
@@ -63,7 +79,9 @@ class SnapshotRepository:
 
     def prune(self, env_id: int, keep: int = 5) -> int:
         versions = self.conn.execute(
-            "SELECT version FROM snapshots WHERE env_id = ? ORDER BY version DESC",
+            "SELECT version FROM snapshots "
+            "WHERE env_id = ? "
+            "ORDER BY version DESC",
             (env_id,),
         ).fetchall()
         if len(versions) <= keep:

@@ -5,7 +5,12 @@ from __future__ import annotations
 from pathlib import Path
 
 from env_manager.adapters.base import BaseAdapter
-from env_manager.models.env import EnvMetadata, FreezeResult, HealthResult, Package
+from env_manager.models.env import (
+    EnvMetadata,
+    FreezeResult,
+    HealthResult,
+    Package,
+)
 
 
 class NodeFnmAdapter(BaseAdapter):
@@ -22,20 +27,32 @@ class NodeFnmAdapter(BaseAdapter):
         if node_ver.exists():
             version = node_ver.read_text().strip()
             fnm_dir = Path.home() / ".fnm" / "node-versions" / f"v{version}"
-            interpreter = str(fnm_dir / "installation" / "bin" / "node") if fnm_dir.exists() else "node"
+            interpreter = (
+                str(fnm_dir / "installation" / "bin" / "node")
+                if fnm_dir.exists()
+                else "node"
+            )
             return EnvMetadata(
-                language="node", tool="fnm", version=version,
+                language="node",
+                tool="fnm",
+                version=version,
                 path=str(fnm_dir if fnm_dir.exists() else path),
                 size_bytes=self._du(fnm_dir) if fnm_dir.exists() else 0,
-                interpreter_path=interpreter, env_type="global",
+                interpreter_path=interpreter,
+                env_type="global",
             )
         return None
 
     def inspect(self, path: Path) -> EnvMetadata:
         return EnvMetadata(
-            language="node", tool="fnm", version="unknown",
-            path=str(path), size_bytes=self._du(path),
-            interpreter_path="node", packages_count=0, env_type="global",
+            language="node",
+            tool="fnm",
+            version="unknown",
+            path=str(path),
+            size_bytes=self._du(path),
+            interpreter_path="node",
+            packages_count=0,
+            env_type="global",
         )
 
     def get_packages(self, path: Path) -> list[Package]:

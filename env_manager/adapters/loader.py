@@ -18,9 +18,11 @@ def discover_builtin_adapters() -> list[type[BaseAdapter]]:
             mod = importlib.import_module(f"env_manager.adapters.{name}")
             for attr_name in dir(mod):
                 attr = getattr(mod, attr_name)
-                if (isinstance(attr, type) and
-                    issubclass(attr, BaseAdapter) and
-                    attr is not BaseAdapter):
+                if (
+                    isinstance(attr, type)
+                    and issubclass(attr, BaseAdapter)
+                    and attr is not BaseAdapter
+                ):
                     adapters.append(attr)
         except ImportError:
             continue

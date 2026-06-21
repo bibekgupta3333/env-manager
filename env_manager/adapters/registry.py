@@ -6,7 +6,10 @@ import sqlite3
 from typing import Any
 
 from env_manager.adapters.base import BaseAdapter
-from env_manager.adapters.loader import discover_builtin_adapters, discover_pip_adapters
+from env_manager.adapters.loader import (
+    discover_builtin_adapters,
+    discover_pip_adapters,
+)
 
 
 class AdapterRegistry:
@@ -19,7 +22,9 @@ class AdapterRegistry:
         rows = self.conn.execute("SELECT * FROM adapter_registry").fetchall()
         if not rows:
             self._seed_builtins()
-            rows = self.conn.execute("SELECT * FROM adapter_registry").fetchall()
+            rows = self.conn.execute(
+                "SELECT * FROM adapter_registry"
+            ).fetchall()
 
         adapter_classes = {}
         for cls in discover_builtin_adapters() + discover_pip_adapters():
@@ -45,7 +50,9 @@ class AdapterRegistry:
         return self._adapters.get(name)
 
     def get_for_language(self, language: str) -> list[BaseAdapter]:
-        return [a for a in self._adapters.values() if a.name.startswith(language)]
+        return [
+            a for a in self._adapters.values() if a.name.startswith(language)
+        ]
 
     def get_all_enabled(self) -> list[BaseAdapter]:
         return list(self._adapters.values())
@@ -55,7 +62,8 @@ class AdapterRegistry:
             inst = cls()
             if inst.name == name:
                 self.conn.execute(
-                    "UPDATE adapter_registry SET enabled = 1 WHERE name = ?", (name,)
+                    "UPDATE adapter_registry SET enabled = 1 WHERE name = ?",
+                    (name,),
                 )
                 self.conn.commit()
                 self._adapters[name] = cls()

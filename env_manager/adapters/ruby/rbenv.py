@@ -5,7 +5,12 @@ from __future__ import annotations
 from pathlib import Path
 
 from env_manager.adapters.base import BaseAdapter
-from env_manager.models.env import EnvMetadata, FreezeResult, HealthResult, Package
+from env_manager.models.env import (
+    EnvMetadata,
+    FreezeResult,
+    HealthResult,
+    Package,
+)
 
 
 class RubyRbenvAdapter(BaseAdapter):
@@ -22,20 +27,32 @@ class RubyRbenvAdapter(BaseAdapter):
         if ruby_ver.exists():
             version = ruby_ver.read_text().strip()
             rbenv_dir = Path.home() / ".rbenv" / "versions" / version
-            interpreter = str(rbenv_dir / "bin" / "ruby") if rbenv_dir.exists() else "ruby"
+            interpreter = (
+                str(rbenv_dir / "bin" / "ruby")
+                if rbenv_dir.exists()
+                else "ruby"
+            )
             return EnvMetadata(
-                language="ruby", tool="rbenv", version=version,
+                language="ruby",
+                tool="rbenv",
+                version=version,
                 path=str(rbenv_dir if rbenv_dir.exists() else path),
                 size_bytes=self._du(rbenv_dir) if rbenv_dir.exists() else 0,
-                interpreter_path=interpreter, env_type="global",
+                interpreter_path=interpreter,
+                env_type="global",
             )
         return None
 
     def inspect(self, path: Path) -> EnvMetadata:
         return EnvMetadata(
-            language="ruby", tool="rbenv", version="unknown",
-            path=str(path), size_bytes=self._du(path),
-            interpreter_path="ruby", packages_count=0, env_type="global",
+            language="ruby",
+            tool="rbenv",
+            version="unknown",
+            path=str(path),
+            size_bytes=self._du(path),
+            interpreter_path="ruby",
+            packages_count=0,
+            env_type="global",
         )
 
     def get_packages(self, path: Path) -> list[Package]:

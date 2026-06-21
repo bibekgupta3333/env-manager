@@ -17,9 +17,13 @@ app = typer.Typer()
 
 @app.callback(invoke_without_command=True)
 def list_envs(
-    by_project: bool = typer.Option(False, "--by-project", help="Group by project"),
+    by_project: bool = typer.Option(
+        False, "--by-project", help="Group by project"
+    ),
     stale: bool = typer.Option(False, "--stale", help="Show only stale"),
-    orphaned: bool = typer.Option(False, "--orphaned", help="Show only orphaned"),
+    orphaned: bool = typer.Option(
+        False, "--orphaned", help="Show only orphaned"
+    ),
     language: str = typer.Option(None, "--lang", help="Filter by language"),
 ) -> None:
     """List tracked environments."""
@@ -52,4 +56,3 @@ def list_envs(
 
     format_env_list(enriched)
     conn.close()
-

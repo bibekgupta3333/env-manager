@@ -9,4 +9,11 @@ from env_manager.daemon.api import (
     ws_api,
 )
 
-__all__ = ["envs_api", "projects_api", "health_api", "snapshots_api", "plugins_api", "ws_api"]
+__all__ = [
+    "envs_api",
+    "projects_api",
+    "health_api",
+    "snapshots_api",
+    "plugins_api",
+    "ws_api",
+]

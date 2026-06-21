@@ -14,6 +14,12 @@ test-cov:
 lint:
 	ruff check env_manager/ tests/
 
+flake8:
+	flake8 env_manager/ tests/
+
+format:
+	black --line-length=79 env_manager/ tests/
+
 lint-fix:
 	ruff check --fix env_manager/ tests/
 
@@ -23,7 +29,7 @@ shellcheck:
 typecheck:
 	mypy env_manager/
 
-check: lint shellcheck typecheck test
+check: lint flake8 shellcheck typecheck test
 	@echo "All checks passed"
 
 binary:

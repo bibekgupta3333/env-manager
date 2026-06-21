@@ -1,6 +1,11 @@
 """Tests for state enums and data models."""
 
-from env_manager.models.env import EnvMetadata, FreezeResult, HealthResult, Package
+from env_manager.models.env import (
+    EnvMetadata,
+    FreezeResult,
+    HealthResult,
+    Package,
+)
 from env_manager.models.project import Project
 from env_manager.models.states import DiscoveryStatus, ManagementState
 
@@ -53,14 +58,20 @@ class TestEnvMetadata:
 
     def test_default_env_type(self):
         meta = EnvMetadata(
-            language="python", tool="venv", version="3.9",
-            path="/tmp/.venv", size_bytes=0, interpreter_path="/bin/python",
+            language="python",
+            tool="venv",
+            version="3.9",
+            path="/tmp/.venv",
+            size_bytes=0,
+            interpreter_path="/bin/python",
         )
         assert meta.env_type == "local"
 
     def test_global_env_type(self):
         meta = EnvMetadata(
-            language="node", tool="nvm", version="20.10.0",
+            language="node",
+            tool="nvm",
+            version="20.10.0",
             path="/home/user/.nvm/versions/node/v20.10.0",
             size_bytes=150_000_000,
             interpreter_path="/home/user/.nvm/versions/node/v20.10.0/bin/node",

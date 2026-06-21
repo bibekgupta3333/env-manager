@@ -19,7 +19,8 @@ def config_show() -> None:
     conn = get_connection(db_path)
 
     rows = conn.execute(
-        "SELECT name, display_name, enabled FROM adapter_registry ORDER BY name"
+        "SELECT name, display_name, enabled "
+        "FROM adapter_registry ORDER BY name"
     ).fetchall()
 
     typer.echo("\nLanguage adapters:")

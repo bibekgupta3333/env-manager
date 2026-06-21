@@ -1,6 +1,10 @@
 """Tests for SnapshotRepository."""
 
-from env_manager.storage.database import close_connection, get_connection, init_db
+from env_manager.storage.database import (
+    close_connection,
+    get_connection,
+    init_db,
+)
 from env_manager.storage.repo_env import EnvironmentRepository
 from env_manager.storage.repo_project import ProjectRepository
 from env_manager.storage.repo_snapshot import SnapshotRepository
@@ -12,8 +16,14 @@ def _setup(db_path):
     proj_repo = ProjectRepository(conn)
     env_repo = EnvironmentRepository(conn)
     pid = proj_repo.insert(name="test", path="/tmp/test")
-    eid = env_repo.insert(project_id=pid, adapter="python.venv", env_type="local",
-                          path="/tmp/test/.venv", language="python", version="3.12")
+    eid = env_repo.insert(
+        project_id=pid,
+        adapter="python.venv",
+        env_type="local",
+        path="/tmp/test/.venv",
+        language="python",
+        version="3.12",
+    )
     return conn, eid
 
 

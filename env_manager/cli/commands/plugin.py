@@ -28,7 +28,9 @@ def list_plugins() -> None:
 
 
 @app.command("enable")
-def enable_plugin(name: str = typer.Argument(..., help="Adapter name")) -> None:
+def enable_plugin(
+    name: str = typer.Argument(..., help="Adapter name")
+) -> None:
     """Enable a language adapter."""
     ensure_db_dir()
     db_path = get_db_path()
@@ -47,7 +49,9 @@ def enable_plugin(name: str = typer.Argument(..., help="Adapter name")) -> None:
 
 
 @app.command("disable")
-def disable_plugin(name: str = typer.Argument(..., help="Adapter name")) -> None:
+def disable_plugin(
+    name: str = typer.Argument(..., help="Adapter name")
+) -> None:
     """Disable a language adapter. Its environments won't be scanned."""
     ensure_db_dir()
     db_path = get_db_path()

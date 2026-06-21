@@ -1,4 +1,5 @@
-"""Lifecycle commands — create, install, uninstall, update, remove, restore, clone, export_spec, import_spec, shell, activate."""
+"""Lifecycle commands — create, install, uninstall, update, remove,
+restore, clone, export_spec, import_spec, shell, activate."""
 
 import json
 import os
@@ -12,7 +13,11 @@ import typer
 from env_manager.adapters.registry import AdapterRegistry
 from env_manager.cli.db_utils import ensure_db_dir, get_db_path
 from env_manager.models.states import ManagementState
-from env_manager.storage.database import close_connection, get_connection, init_db
+from env_manager.storage.database import (
+    close_connection,
+    get_connection,
+    init_db,
+)
 from env_manager.storage.repo_env import EnvironmentRepository
 from env_manager.storage.repo_project import ProjectRepository
 from env_manager.storage.repo_snapshot import SnapshotRepository
@@ -22,9 +27,13 @@ app = typer.Typer(help="Create and manage environments")
 
 @app.command()
 def create(
-    lang_version: str = typer.Argument(..., help="Language and version, e.g. python@3.12"),
+    lang_version: str = typer.Argument(
+        ..., help="Language and version, e.g. python@3.12"
+    ),
     path: str = typer.Argument(".", help="Target path"),
-    tool: str = typer.Option("", "--tool", help="Specific tool: venv, poetry, nvm"),
+    tool: str = typer.Option(
+        "", "--tool", help="Specific tool: venv, poetry, nvm"
+    ),
     dry_run: bool = typer.Option(False, "--dry-run", help="Preview"),
     confirm: bool = typer.Option(False, "--confirm", help="Execute"),
 ) -> None:
@@ -70,11 +79,19 @@ def create(
         proj_repo = ProjectRepository(conn)
         env_repo = EnvironmentRepository(conn)
 
-        proj_id, _ = proj_repo.get_or_create(name=target.parent.name, path=str(target.parent))
+        proj_id, _ = proj_repo.get_or_create(
+            name=target.parent.name, path=str(target.parent)
+        )
         env_repo.insert(
-            project_id=proj_id, adapter=adapter.name, env_type=adapter.env_type,
-            path=str(target), language=language, version=meta.version, tool=meta.tool,
-            size_bytes=meta.size_bytes, management_state=ManagementState.READY,
+            project_id=proj_id,
+            adapter=adapter.name,
+            env_type=adapter.env_type,
+            path=str(target),
+            language=language,
+            version=meta.version,
+            tool=meta.tool,
+            size_bytes=meta.size_bytes,
+            management_state=ManagementState.READY,
         )
         typer.echo(f"Created: {target} ({adapter.name})")
     finally:
@@ -165,7 +182,9 @@ def uninstall(
 @app.command()
 def update(
     project: str = typer.Argument(..., help="Project name or path"),
-    packages: list[str] = typer.Argument(None, help="Packages (omit for --all)"),
+    packages: list[str] = typer.Argument(
+        None, help="Packages (omit for --all)"
+    ),
     all_pkgs: bool = typer.Option(False, "--all", help="Update all packages"),
     dry_run: bool = typer.Option(False, "--dry-run"),
     confirm: bool = typer.Option(False, "--confirm"),
@@ -206,7 +225,9 @@ def update(
 @app.command()
 def remove(
     project: str = typer.Argument(..., help="Project name or path"),
-    snapshot: bool = typer.Option(False, "--snapshot", help="Save blueprint first"),
+    snapshot: bool = typer.Option(
+        False, "--snapshot", help="Save blueprint first"
+    ),
     dry_run: bool = typer.Option(False, "--dry-run"),
     confirm: bool = typer.Option(False, "--confirm"),
 ) -> None:
@@ -227,7 +248,10 @@ def remove(
             raise typer.Exit(1)
 
         if dry_run:
-            typer.echo(f"Would {'snapshot + ' if snapshot else ''}remove: {env['path']}")
+            typer.echo(
+                f"Would {'snapshot + ' if snapshot else ''}"
+                f"remove: {env['path']}"
+            )
             return
 
         if snapshot:
@@ -239,13 +263,21 @@ def remove(
                     SnapshotRepository(conn).insert(
                         env_id=env["id"],
                         frozen_deps={p.name: p.version for p in fr.packages},
-                        raw_lockfile=fr.raw_content, lockfile_format=fr.format,
+                        raw_lockfile=fr.raw_content,
+                        lockfile_format=fr.format,
                     )
                 except Exception:
                     pass
 
         env_repo = EnvironmentRepository(conn)
-        env_repo.update_state(env["id"], ManagementState.SNAPSHOTTED if snapshot else ManagementState.DELETED)
+        env_repo.update_state(
+            env["id"],
+            (
+                ManagementState.SNAPSHOTTED
+                if snapshot
+                else ManagementState.DELETED
+            ),
+        )
 
         env_path = Path(env["path"])
         if env_path.exists():
@@ -262,7 +294,9 @@ def remove(
 @app.command()
 def restore(
     project: str = typer.Argument(..., help="Project name"),
-    snapshot_version: int = typer.Option(None, "--snapshot", "-s", help="Version to restore"),
+    snapshot_version: int = typer.Option(
+        None, "--snapshot", "-s", help="Version to restore"
+    ),
     dry_run: bool = typer.Option(False, "--dry-run"),
     confirm: bool = typer.Option(False, "--confirm"),
 ) -> None:
@@ -281,7 +315,9 @@ def restore(
         env_repo = EnvironmentRepository(conn)
 
         all_snaps = snap_repo.list_all()
-        matching = [s for s in all_snaps if _env_matches_snap(conn, s, project)]
+        matching = [
+            s for s in all_snaps if _env_matches_snap(conn, s, project)
+        ]
 
         if not matching:
             typer.echo(f"No snapshots for: {project}")
@@ -383,7 +419,9 @@ def export_spec(
         packages = adapter.get_packages(Path(env["path"])) if adapter else []
 
         spec = {
-            "version": 1, "language": env["language"], "tool": env["tool"],
+            "version": 1,
+            "language": env["language"],
+            "tool": env["tool"],
             "version_req": env["version"],
             "packages": {p.name: p.version for p in packages},
         }
@@ -424,7 +462,10 @@ def import_spec(
             target = target / ".venv"
 
         if dry_run:
-            typer.echo(f"Would create {lang}@{version} at {target} ({len(spec['packages'])} pkgs)")
+            typer.echo(
+                f"Would create {lang}@{version} "
+                f"at {target} ({len(spec['packages'])} pkgs)"
+            )
             return
 
         registry = AdapterRegistry(conn)
@@ -466,7 +507,13 @@ def shell(
             if activate_script.exists():
                 shell_bin = os.environ.get("SHELL", "/bin/bash")
                 typer.echo(f"Spawning {shell_bin}...")
-                sp.run([shell_bin, "-c", f"source {activate_script}; exec {shell_bin}"])
+                sp.run(
+                    [
+                        shell_bin,
+                        "-c",
+                        f"source {activate_script}; exec {shell_bin}",
+                    ]
+                )
                 return
 
         typer.echo(f"No shell support for {lang}")
@@ -479,7 +526,10 @@ def shell(
 def activate(
     project: str = typer.Argument(..., help="Project name or path"),
 ) -> None:
-    """Print eval-able activation. Usage: eval \"$(envs lifecycle activate <project>)\""""
+    """Print eval-able activation.
+
+    Usage: eval \"$(envs lifecycle activate <project>)\"
+    """
     ensure_db_dir()
     db_path = get_db_path()
     init_db(db_path)
@@ -516,7 +566,7 @@ def activate(
         if sys.stdout.isatty():
             typer.echo("  To activate in your current shell, run:")
             typer.echo("")
-            typer.echo(f"    eval \"$(envs lifecycle activate {project})\"")
+            typer.echo(f'    eval "$(envs lifecycle activate {project})"')
             typer.echo("")
             typer.echo("  Or spawn a subshell:")
             typer.echo("")
@@ -533,6 +583,7 @@ def activate(
 
 
 # ── helpers ────────────────────────────────────────────
+
 
 def _resolve(conn, identifier):
     env_repo = EnvironmentRepository(conn)

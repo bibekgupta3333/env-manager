@@ -16,20 +16,34 @@ class FakePythonAdapter(BaseAdapter):
 
     def detect(self, path):
         if (path / ".fake-python").exists():
-            return EnvMetadata(language="python", tool="fake", version="3.0",
-                               path=str(path), size_bytes=100, interpreter_path="/bin/fake")
+            return EnvMetadata(
+                language="python",
+                tool="fake",
+                version="3.0",
+                path=str(path),
+                size_bytes=100,
+                interpreter_path="/bin/fake",
+            )
         return None
 
     def inspect(self, path):
-        return EnvMetadata(language="python", tool="fake", version="3.0",
-                           path=str(path), size_bytes=100, interpreter_path="/bin/fake",
-                           packages_count=0)
+        return EnvMetadata(
+            language="python",
+            tool="fake",
+            version="3.0",
+            path=str(path),
+            size_bytes=100,
+            interpreter_path="/bin/fake",
+            packages_count=0,
+        )
 
     def get_packages(self, path):
         return []
 
     def freeze(self, path):
-        return FreezeResult(raw_content="", format="requirements.txt", packages=[])
+        return FreezeResult(
+            raw_content="", format="requirements.txt", packages=[]
+        )
 
     def check_health(self, path):
         return HealthResult(status="healthy")
@@ -46,21 +60,36 @@ class FakeNodeAdapter(BaseAdapter):
 
     def detect(self, path):
         if (path / ".fake-node").exists():
-            return EnvMetadata(language="node", tool="fake", version="20.0",
-                               path=str(path), size_bytes=200,
-                               interpreter_path="/bin/fake-node", env_type="global")
+            return EnvMetadata(
+                language="node",
+                tool="fake",
+                version="20.0",
+                path=str(path),
+                size_bytes=200,
+                interpreter_path="/bin/fake-node",
+                env_type="global",
+            )
         return None
 
     def inspect(self, path):
-        return EnvMetadata(language="node", tool="fake", version="20.0",
-                           path=str(path), size_bytes=200,
-                           interpreter_path="/bin/fake-node", packages_count=0, env_type="global")
+        return EnvMetadata(
+            language="node",
+            tool="fake",
+            version="20.0",
+            path=str(path),
+            size_bytes=200,
+            interpreter_path="/bin/fake-node",
+            packages_count=0,
+            env_type="global",
+        )
 
     def get_packages(self, path):
         return []
 
     def freeze(self, path):
-        return FreezeResult(raw_content="", format="package-lock.json", packages=[])
+        return FreezeResult(
+            raw_content="", format="package-lock.json", packages=[]
+        )
 
     def check_health(self, path):
         return HealthResult(status="healthy")
@@ -75,7 +104,9 @@ def test_scanner_finds_matching_paths(tmp_path, db_connection):
     node_proj.mkdir()
     (node_proj / ".fake-node").touch()
 
-    scanner = Scanner(db_connection, adapters=[FakePythonAdapter(), FakeNodeAdapter()])
+    scanner = Scanner(
+        db_connection, adapters=[FakePythonAdapter(), FakeNodeAdapter()]
+    )
     results = scanner.scan(str(tmp_path), depth=3)
 
     assert len(results) == 2

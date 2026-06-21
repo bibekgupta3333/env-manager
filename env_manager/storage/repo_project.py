@@ -10,7 +10,9 @@ class ProjectRepository:
     def __init__(self, conn: sqlite3.Connection):
         self.conn = conn
 
-    def insert(self, name: str, path: str, tags: list[str] | None = None) -> int:
+    def insert(
+        self, name: str, path: str, tags: list[str] | None = None
+    ) -> int:
         cursor = self.conn.execute(
             "INSERT INTO projects (name, path, tags) VALUES (?, ?, ?)",
             (name, path, json.dumps(tags or [])),
@@ -42,7 +44,9 @@ class ProjectRepository:
 
     def set_pinned(self, project_id: int, pinned: bool) -> None:
         self.conn.execute(
-            "UPDATE projects SET is_pinned = ?, updated_at = datetime('now') WHERE id = ?",
+            "UPDATE projects "
+            "SET is_pinned = ?, updated_at = datetime('now') "
+            "WHERE id = ?",
             (int(pinned), project_id),
         )
         self.conn.commit()

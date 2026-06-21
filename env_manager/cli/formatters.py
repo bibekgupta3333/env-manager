@@ -37,17 +37,23 @@ def format_env_list(envs: list[dict[str, Any]]) -> None:
 
 
 def format_env_info(env: dict[str, Any]) -> None:
-    console.print(f"[bold cyan]{env.get('project_name', 'Unknown')}[/bold cyan]")
+    console.print(
+        f"[bold cyan]{env.get('project_name', 'Unknown')}[/bold cyan]"
+    )
     console.print(f"  Language:  {env.get('language')} {env.get('version')}")
     console.print(f"  Tool:      {env.get('tool')}")
     console.print(f"  Size:      {_format_size(env.get('size_bytes', 0))}")
     console.print(f"  State:     {env.get('management_state')}")
     console.print(f"  Path:      {env.get('path')}")
     if env.get("last_health_result"):
-        color = {"healthy": "green", "degraded": "yellow", "broken": "red"}.get(
-            env["last_health_result"], ""
+        color = {
+            "healthy": "green",
+            "degraded": "yellow",
+            "broken": "red",
+        }.get(env["last_health_result"], "")
+        console.print(
+            f"  Health:    [{color}]{env['last_health_result']}[/{color}]"
         )
-        console.print(f"  Health:    [{color}]{env['last_health_result']}[/{color}]")
 
 
 def _format_size(size_bytes: int) -> str:

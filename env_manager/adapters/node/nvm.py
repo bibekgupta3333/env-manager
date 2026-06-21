@@ -7,7 +7,12 @@ from pathlib import Path
 from typing import Any
 
 from env_manager.adapters.base import BaseAdapter
-from env_manager.models.env import EnvMetadata, FreezeResult, HealthResult, Package
+from env_manager.models.env import (
+    EnvMetadata,
+    FreezeResult,
+    HealthResult,
+    Package,
+)
 
 
 class NodeNvmAdapter(BaseAdapter):
@@ -23,17 +28,25 @@ class NodeNvmAdapter(BaseAdapter):
         nvmrc = path / ".nvmrc"
         if nvmrc.exists():
             version = nvmrc.read_text().strip()
-            nvm_path = Path.home() / ".nvm" / "versions" / "node" / f"v{version}"
+            nvm_path = (
+                Path.home() / ".nvm" / "versions" / "node" / f"v{version}"
+            )
             if nvm_path.exists():
                 return EnvMetadata(
-                    language="node", tool="nvm", version=version,
-                    path=str(nvm_path), size_bytes=self._du(nvm_path),
+                    language="node",
+                    tool="nvm",
+                    version=version,
+                    path=str(nvm_path),
+                    size_bytes=self._du(nvm_path),
                     interpreter_path=str(nvm_path / "bin" / "node"),
                     env_type="global",
                 )
             return EnvMetadata(
-                language="node", tool="nvm", version=version,
-                path=str(path), size_bytes=0,
+                language="node",
+                tool="nvm",
+                version=version,
+                path=str(path),
+                size_bytes=0,
                 interpreter_path="node",
                 env_type="global",
             )
@@ -42,8 +55,11 @@ class NodeNvmAdapter(BaseAdapter):
     def inspect(self, path: Path) -> EnvMetadata:
         version = self._get_node_version(path)
         return EnvMetadata(
-            language="node", tool="nvm", version=version,
-            path=str(path), size_bytes=self._du(path),
+            language="node",
+            tool="nvm",
+            version=version,
+            path=str(path),
+            size_bytes=self._du(path),
             interpreter_path=self._find_node(path),
             packages_count=len(self.get_packages(path)),
             env_type="global",
@@ -55,23 +71,40 @@ class NodeNvmAdapter(BaseAdapter):
             node_modules = self._find_node_modules(path)
         try:
             result = subprocess.run(
-                ["npm", "list", "--json", "--depth=0", "--prefix", str(path.parent)],
-                capture_output=True, text=True, timeout=30,
+                [
+                    "npm",
+                    "list",
+                    "--json",
+                    "--depth=0",
+                    "--prefix",
+                    str(path.parent),
+                ],
+                capture_output=True,
+                text=True,
+                timeout=30,
             )
             if result.returncode == 0 and result.stdout.strip():
                 import json
+
                 data = json.loads(result.stdout)
                 deps = data.get("dependencies", {})
-                return [Package(name=k, version=v.get("version", "unknown"))
-                        for k, v in deps.items()]
+                return [
+                    Package(name=k, version=v.get("version", "unknown"))
+                    for k, v in deps.items()
+                ]
         except Exception:
             pass
         return []
 
     def freeze(self, path: Path) -> FreezeResult:
         packages = self.get_packages(path)
-        raw = "\n".join(f"{p.name}@{p.version}" for p in sorted(packages, key=lambda x: x.name))
-        return FreezeResult(raw_content=raw, format="package.json", packages=packages)
+        raw = "\n".join(
+            f"{p.name}@{p.version}"
+            for p in sorted(packages, key=lambda x: x.name)
+        )
+        return FreezeResult(
+            raw_content=raw, format="package.json", packages=packages
+        )
 
     def check_health(self, path: Path) -> HealthResult:
         checks: list[dict[str, Any]] = []
@@ -82,7 +115,12 @@ class NodeNvmAdapter(BaseAdapter):
             return HealthResult(status="broken", checks=checks, errors=errors)
 
         try:
-            r = subprocess.run([node_bin, "--version"], capture_output=True, text=True, timeout=10)
+            r = subprocess.run(
+                [node_bin, "--version"],
+                capture_output=True,
+                text=True,
+                timeout=10,
+            )
             checks.append({"name": "node_binary", "passed": r.returncode == 0})
         except Exception as e:
             errors.append(str(e))
@@ -92,7 +130,12 @@ class NodeNvmAdapter(BaseAdapter):
 
     def _get_node_version(self, path: Path) -> str:
         try:
-            r = subprocess.run(["node", "--version"], capture_output=True, text=True, timeout=10)
+            r = subprocess.run(
+                ["node", "--version"],
+                capture_output=True,
+                text=True,
+                timeout=10,
+            )
             return r.stdout.strip().lstrip("v")
         except Exception:
             return "unknown"

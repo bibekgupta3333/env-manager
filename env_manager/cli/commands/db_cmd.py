@@ -13,7 +13,9 @@ app = typer.Typer(help="Backup and restore the env-manager database")
 
 @app.command()
 def backup(
-    output: str = typer.Option(None, "--path", "-p", help="Backup destination path"),
+    output: str = typer.Option(
+        None, "--path", "-p", help="Backup destination path"
+    ),
 ) -> None:
     """Backup the database to a safe location."""
     db_path_str = get_db_path()
@@ -40,11 +42,16 @@ def backup(
 @app.command()
 def restore(
     backup_path: str = typer.Argument(..., help="Path to backup file"),
-    confirm: bool = typer.Option(False, "--confirm", help="Confirm restore (overwrites current DB)"),
+    confirm: bool = typer.Option(
+        False, "--confirm", help="Confirm restore (overwrites current DB)"
+    ),
 ) -> None:
     """Restore database from a backup."""
     if not confirm:
-        typer.echo("Use --confirm to restore. This will overwrite your current database.")
+        typer.echo(
+            "Use --confirm to restore. "
+            "This will overwrite your current database."
+        )
         raise typer.Exit(1)
 
     backup = Path(backup_path)

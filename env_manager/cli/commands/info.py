@@ -14,7 +14,9 @@ app = typer.Typer()
 
 
 @app.callback(invoke_without_command=True)
-def info(project: str = typer.Argument(..., help="Project name or path")) -> None:
+def info(
+    project: str = typer.Argument(..., help="Project name or path")
+) -> None:
     """Show detailed info for a project."""
     ensure_db_dir()
     db_path = get_db_path()

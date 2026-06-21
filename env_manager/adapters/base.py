@@ -6,11 +6,17 @@ from abc import ABC, abstractmethod
 from pathlib import Path
 from typing import Any
 
-from env_manager.models.env import EnvMetadata, FreezeResult, HealthResult, Package
+from env_manager.models.env import (
+    EnvMetadata,
+    FreezeResult,
+    HealthResult,
+    Package,
+)
 
 
 class InspectError(Exception):
     """Raised when an adapter cannot inspect an environment."""
+
     pass
 
 
@@ -46,7 +52,9 @@ class BaseAdapter(ABC):
     def check_health(self, path: Path) -> HealthResult:
         """Is this environment functional?"""
 
-    def create(self, path: Path, config: dict[str, Any] | None = None) -> EnvMetadata:
+    def create(
+        self, path: Path, config: dict[str, Any] | None = None
+    ) -> EnvMetadata:
         raise NotImplementedError(f"{self.name} does not support create")
 
     def install(self, path: Path, packages: list[str]) -> None:

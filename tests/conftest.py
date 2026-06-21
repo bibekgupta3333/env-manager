@@ -36,7 +36,9 @@ def fake_venv(tmp_path):
     venv_dir = tmp_path / ".venv"
     venv_dir.mkdir()
     (venv_dir / "pyvenv.cfg").write_text(
-        "home = /usr/bin\nversion = 3.12.1\ninclude-system-site-packages = false\n"
+        "home = /usr/bin\n"
+        "version = 3.12.1\n"
+        "include-system-site-packages = false\n"
     )
     bin_dir = venv_dir / "bin"
     bin_dir.mkdir()

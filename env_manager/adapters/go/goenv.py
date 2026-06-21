@@ -5,7 +5,12 @@ from __future__ import annotations
 from pathlib import Path
 
 from env_manager.adapters.base import BaseAdapter
-from env_manager.models.env import EnvMetadata, FreezeResult, HealthResult, Package
+from env_manager.models.env import (
+    EnvMetadata,
+    FreezeResult,
+    HealthResult,
+    Package,
+)
 
 
 class GoGoenvAdapter(BaseAdapter):
@@ -22,20 +27,30 @@ class GoGoenvAdapter(BaseAdapter):
         if go_ver.exists():
             version = go_ver.read_text().strip()
             goenv_dir = Path.home() / ".goenv" / "versions" / version
-            interpreter = str(goenv_dir / "bin" / "go") if goenv_dir.exists() else "go"
+            interpreter = (
+                str(goenv_dir / "bin" / "go") if goenv_dir.exists() else "go"
+            )
             return EnvMetadata(
-                language="go", tool="goenv", version=version,
+                language="go",
+                tool="goenv",
+                version=version,
                 path=str(goenv_dir if goenv_dir.exists() else path),
                 size_bytes=self._du(goenv_dir) if goenv_dir.exists() else 0,
-                interpreter_path=interpreter, env_type="global",
+                interpreter_path=interpreter,
+                env_type="global",
             )
         return None
 
     def inspect(self, path: Path) -> EnvMetadata:
         return EnvMetadata(
-            language="go", tool="goenv", version="unknown",
-            path=str(path), size_bytes=self._du(path),
-            interpreter_path="go", packages_count=0, env_type="global",
+            language="go",
+            tool="goenv",
+            version="unknown",
+            path=str(path),
+            size_bytes=self._du(path),
+            interpreter_path="go",
+            packages_count=0,
+            env_type="global",
         )
 
     def get_packages(self, path: Path) -> list[Package]:
