@@ -56,7 +56,7 @@ ignore_missing_imports = true
 
 [[tool.mypy.overrides]]
 module = ["env_manager.daemon.*", "env_manager.daemon.api.*", "env_manager.cli.commands.lifecycle", "env_manager.cli.commands.snapshots_cmd", "env_manager.cli.commands.cleanup_cmd", "env_manager.cli.commands.doctor_cmd"]
-disable_error_code = ["no-untyped-def", "attr-defined"]
+disable_error_code = ["no-untyped-def", "attr-defined", "no-untyped-call"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

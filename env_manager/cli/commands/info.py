@@ -1,5 +1,7 @@
 """Info command — show detailed environment info."""
 
+from pathlib import Path
+
 import typer
 
 from env_manager.cli.db_utils import ensure_db_dir, get_db_path
@@ -22,7 +24,12 @@ def info(project: str = typer.Argument(..., help="Project name or path")) -> Non
     proj_repo = ProjectRepository(conn)
     env_repo = EnvironmentRepository(conn)
 
-    proj = proj_repo.get_by_path(project)
+    # Resolve symlinks for macOS /tmp → /private/tmp
+    resolved = str(Path(project).resolve())
+
+    proj = proj_repo.get_by_path(resolved)
+    if not proj:
+        proj = proj_repo.get_by_path(project)
     if not proj:
         all_projects = proj_repo.list_all()
         proj = next((p for p in all_projects if p["name"] == project), None)

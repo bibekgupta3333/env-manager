@@ -152,7 +152,7 @@ def gc(
 
 
 @app.command()
-def diff(
+def compare(
     project_a: str = typer.Argument(..., help="First project"),
     project_b: str = typer.Argument(..., help="Second project"),
 ) -> None:

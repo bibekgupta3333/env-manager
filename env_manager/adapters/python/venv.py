@@ -75,7 +75,7 @@ class PythonVenvAdapter(BaseAdapter):
             errors.append(f"Python binary not found: {py_bin}")
             return HealthResult(
                 status="broken", checks=checks, errors=errors,
-                suggestions=["Recreate environment with envs restore"],
+                suggestions=["Recreate environment with envs lifecycle restore"],
             )
 
         try:
@@ -103,6 +103,43 @@ class PythonVenvAdapter(BaseAdapter):
 
         status = "healthy" if len(errors) == 0 else "broken"
         return HealthResult(status=status, checks=checks, errors=errors, suggestions=suggestions)
+
+    def create(self, path: Path, config: dict[str, Any] | None = None) -> EnvMetadata:
+        version = (config or {}).get("version", "")
+        # Try exact version first, then major.minor, then default python3
+        candidates = []
+        if version:
+            candidates.append(f"python{version}")
+            parts = version.split(".")
+            if len(parts) >= 2:
+                candidates.append(f"python{parts[0]}.{parts[1]}")
+        candidates.append("python3")
+
+        for python_bin in candidates:
+            try:
+                subprocess.run(
+                    [python_bin, "-m", "venv", str(path)],
+                    check=True, capture_output=True, text=True, timeout=60,
+                )
+                break
+            except (subprocess.CalledProcessError, FileNotFoundError):
+                continue
+        else:
+            raise RuntimeError(f"Cannot create venv: no python binary found (tried {candidates})")
+        return self.inspect(path)
+
+    def install(self, path: Path, packages: list[str]) -> None:
+        pip_bin = str(self._python_bin(path).parent / "pip")
+        try:
+            subprocess.run(
+                [pip_bin, "install"] + list(packages),
+                check=True, capture_output=True, text=True, timeout=120,
+            )
+        except subprocess.CalledProcessError:
+            subprocess.run(
+                [str(self._python_bin(path)), "-m", "pip", "install"] + list(packages),
+                check=True, capture_output=True, text=True, timeout=120,
+            )
 
     def _read_version(self, path: Path) -> str:
         cfg = path / "pyvenv.cfg"

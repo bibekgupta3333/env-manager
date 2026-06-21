@@ -35,7 +35,7 @@ def doctor(
             envs = env_repo.list_all()
             envs = [e for e in envs if e["management_state"] not in ("purged", "snapshotted", "deleted")]
         else:
-            env = _resolve_env(conn, project, env_repo, proj_repo)  # type: ignore[no-untyped-call]
+            env = _resolve_env(conn, project, env_repo, proj_repo)
             if not env:
                 typer.echo(f"Environment not found: {project}")
                 raise typer.Exit(1)
