@@ -13,6 +13,7 @@ from env_manager.models.env import (
     HealthResult,
     Package,
 )
+from env_manager.platform import find_vm_path, node_exe_name
 
 
 class NodeNvmAdapter(BaseAdapter):
@@ -22,23 +23,27 @@ class NodeNvmAdapter(BaseAdapter):
     env_type = "global"
 
     def find_patterns(self) -> list[str]:
-        return ["**/.nvmrc"]
+        return ["**/.nvmrc", "**/package.json"]
 
     def detect(self, path: Path) -> EnvMetadata | None:
         nvmrc = path / ".nvmrc"
+        pkg_json = path / "package.json"
+        node_modules = path / "node_modules"
+
+        # .nvmrc takes priority
         if nvmrc.exists():
             version = nvmrc.read_text().strip()
-            nvm_path = (
-                Path.home() / ".nvm" / "versions" / "node" / f"v{version}"
-            )
-            if nvm_path.exists():
+            nvm_path = find_vm_path("nvm", "versions", "node", f"v{version}")
+            if nvm_path:
                 return EnvMetadata(
                     language="node",
                     tool="nvm",
                     version=version,
-                    path=str(nvm_path),
+                    path=str(path),
                     size_bytes=self._du(nvm_path),
-                    interpreter_path=str(nvm_path / "bin" / "node"),
+                    interpreter_path=str(
+                        nvm_path / node_exe_name()
+                    ),
                     env_type="global",
                 )
             return EnvMetadata(
@@ -46,10 +51,39 @@ class NodeNvmAdapter(BaseAdapter):
                 tool="nvm",
                 version=version,
                 path=str(path),
-                size_bytes=0,
+                size_bytes=self._du(node_modules)
+                if node_modules.exists()
+                else 0,
                 interpreter_path="node",
                 env_type="global",
             )
+
+        # package.json → Node project
+        if pkg_json.exists():
+            try:
+                import json
+
+                data = json.loads(pkg_json.read_text())
+                engines = data.get("engines", {})
+                version = str(engines.get("node", "unknown"))
+            except Exception:
+                version = "unknown"
+
+            size = (
+                self._du(node_modules)
+                if node_modules.exists()
+                else self._du(path)
+            )
+            return EnvMetadata(
+                language="node",
+                tool="nvm",
+                version=version,
+                path=str(path),
+                size_bytes=size,
+                interpreter_path="node",
+                env_type="global",
+            )
+
         return None
 
     def inspect(self, path: Path) -> EnvMetadata:
@@ -144,6 +178,12 @@ class NodeNvmAdapter(BaseAdapter):
         node_path = path / "bin" / "node"
         if node_path.exists():
             return str(node_path)
+        # Fallback: try system node via PATH
+        import shutil
+
+        system_node = shutil.which("node")
+        if system_node:
+            return system_node
         return "node"
 
     def _find_node_modules(self, path: Path) -> Path | None:

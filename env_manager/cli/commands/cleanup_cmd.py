@@ -23,8 +23,8 @@ from env_manager.storage.repo_snapshot import SnapshotRepository
 app = typer.Typer(help="Clean up stale and orphaned environments")
 
 
-@app.callback(invoke_without_command=True)
-def cleanup(
+@app.command()
+def run(
     stale_days: int = typer.Option(
         60, "--stale", "-s", help="Days since last use to consider stale"
     ),
@@ -212,6 +212,13 @@ def compare(
 
         def _get_packages(identifier: str) -> tuple[Any, dict[str, Any]]:
             env = env_repo.get_by_path(identifier)
+            if not env:
+                resolved = str(Path(identifier).resolve())
+                env = env_repo.get_by_path(resolved)
+            if not env:
+                # Try with .venv suffix
+                resolved = str(Path(identifier).resolve() / ".venv")
+                env = env_repo.get_by_path(resolved)
             if not env:
                 proj = next(
                     (

@@ -57,6 +57,11 @@ def create(
         adapters = registry.get_for_language(language)
         if tool:
             adapters = [a for a in adapters if tool in a.name]
+        # Prefer adapters that support create() over detection-only ones
+        createable = [a for a in adapters
+                      if a.name.split(".")[-1] in ("venv", "virtualenv")]
+        if createable:
+            adapters = createable
         if not adapters:
             typer.echo(f"No adapter for {language}")
             raise typer.Exit(1)

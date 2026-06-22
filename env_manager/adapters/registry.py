@@ -31,9 +31,25 @@ class AdapterRegistry:
             inst = cls()
             adapter_classes[inst.name] = cls
 
+        # Load enabled adapters from DB
+        db_names = {r["name"] for r in rows}
         for row in rows:
             if row["enabled"] and row["name"] in adapter_classes:
                 self._adapters[row["name"]] = adapter_classes[row["name"]]()
+
+        # Seed any newly discovered adapters not yet in DB
+        for name, cls in adapter_classes.items():
+            if name not in db_names:
+                inst = cls()
+                self.conn.execute(
+                    """INSERT OR IGNORE INTO adapter_registry
+                       (name, display_name, version, env_type, source)
+                       VALUES (?, ?, ?, ?, 'builtin')""",
+                    (inst.name, inst.display_name,
+                     inst.version, inst.env_type),
+                )
+                self.conn.commit()
+                self._adapters[name] = cls()
 
     def _seed_builtins(self) -> None:
         for cls in discover_builtin_adapters():

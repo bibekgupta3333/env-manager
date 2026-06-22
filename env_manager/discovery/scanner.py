@@ -6,6 +6,7 @@ from pathlib import Path
 from env_manager.adapters.base import BaseAdapter
 from env_manager.models.env import EnvMetadata
 from env_manager.models.states import DiscoveryStatus, ManagementState
+from env_manager.platform import system_excludes
 from env_manager.storage.repo_activity import ActivityRepository
 from env_manager.storage.repo_env import EnvironmentRepository
 from env_manager.storage.repo_project import ProjectRepository
@@ -21,16 +22,15 @@ DEFAULT_EXCLUDES: set[str] = {
     ".eggs",
     "dist",
     "build",
+    # IDE extension installs (not user projects)
+    "extensions",
+    # Package manager caches (auto-managed, not user envs)
+    "pre-commit",
+    "uv",
 }
 
-SYSTEM_PREFIXES: list[str] = [
-    "/usr",
-    "/System",
-    "/Library",
-    "/proc",
-    "/sys",
-    "/dev",
-]
+# System paths determined at runtime per platform
+SYSTEM_PREFIXES: list[str] = system_excludes()
 
 
 class Scanner:
