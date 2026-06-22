@@ -63,6 +63,12 @@ ignore = ["B008", "B904"]
 "env_manager/**/hook_cmd.py" = ["E501"]
 "env_manager/**/asdf/*.py" = ["E501"]
 "env_manager/**/versions_cmd.py" = ["E501"]
+"env_manager/**/pin_cmd.py" = ["E501"]
+"env_manager/**/track_cmd.py" = ["E501"]
+"env_manager/**/list_cmd.py" = ["E501"]
+"env_manager/**/formatters.py" = ["E501"]
+"tests/**/test_lifecycle.py" = ["E501"]
+"tests/**/test_api.py" = ["E501"]
 
 [tool.mypy]
 python_version = "3.10"
@@ -73,7 +79,7 @@ module = ["apscheduler.*", "apscheduler.schedulers.background"]
 ignore_missing_imports = true
 
 [[tool.mypy.overrides]]
-module = ["env_manager.daemon.*", "env_manager.daemon.api.*", "env_manager.cli.commands.lifecycle", "env_manager.cli.commands.snapshots_cmd", "env_manager.cli.commands.cleanup_cmd", "env_manager.cli.commands.doctor_cmd", "env_manager.cli.commands.hook_cmd", "env_manager.cli.commands.db_cmd"]
+module = ["env_manager.daemon.*", "env_manager.daemon.api.*", "env_manager.cli.commands.lifecycle", "env_manager.cli.commands.snapshots_cmd", "env_manager.cli.commands.cleanup_cmd", "env_manager.cli.commands.doctor_cmd", "env_manager.cli.commands.hook_cmd", "env_manager.cli.commands.db_cmd", "env_manager.cli.resolve"]
 disable_error_code = ["no-untyped-def", "attr-defined", "no-untyped-call"]
 
 [tool.pytest.ini_options]

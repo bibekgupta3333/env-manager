@@ -32,7 +32,7 @@ class PythonPoetryAdapter(BaseAdapter):
             content = toml.read_text()
             if "[tool.poetry]" not in content:
                 return None
-        except Exception:
+        except (OSError, UnicodeDecodeError):
             return None
 
         version = self._read_python_version(path)
@@ -71,7 +71,8 @@ class PythonPoetryAdapter(BaseAdapter):
                     Package(name=p["name"], version=p.get("version", "?"))
                     for p in data
                 ]
-        except Exception:
+        except (subprocess.TimeoutExpired, subprocess.SubprocessError,
+                json.JSONDecodeError, OSError):
             pass
         return []
 
@@ -94,7 +95,8 @@ class PythonPoetryAdapter(BaseAdapter):
                 ["poetry", "--version"], capture_output=True, timeout=10
             )
             return HealthResult(status="healthy")
-        except Exception:
+        except (OSError, subprocess.TimeoutExpired,
+                subprocess.SubprocessError):
             return HealthResult(
                 status="broken",
                 errors=["poetry not found"],

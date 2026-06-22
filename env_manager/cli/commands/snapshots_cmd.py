@@ -36,7 +36,7 @@ def snapshots(
             ]
 
         if not all_snaps:
-            typer.echo("No snapshots found.")
+            typer.echo("no snapshots found")
             return
 
         for snap in all_snaps:
@@ -81,7 +81,7 @@ def prune(
         if project:
             env = env_repo.get_by_path(project)
             if not env:
-                typer.echo(f"Environment not found: {project}")
+                typer.echo(f"environment not found: {project}")
                 raise typer.Exit(1)
             env_ids = [env["id"]]
         else:

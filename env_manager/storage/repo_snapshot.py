@@ -1,7 +1,5 @@
 """Repository for snapshot CRUD operations."""
 
-# mypy: disable_error_code = no-any-return
-
 from __future__ import annotations
 
 import json
@@ -10,7 +8,7 @@ from typing import Any
 
 
 class SnapshotRepository:
-    def __init__(self, conn: sqlite3.Connection):
+    def __init__(self, conn: sqlite3.Connection) -> None:
         self.conn = conn
 
     def insert(
@@ -52,10 +50,11 @@ class SnapshotRepository:
     def get_by_env_and_version(
         self, env_id: int, version: int
     ) -> sqlite3.Row | None:
-        return self.conn.execute(
+        row = self.conn.execute(
             "SELECT * FROM snapshots WHERE env_id = ? AND version = ?",
             (env_id, version),
         ).fetchone()
+        return row  # type: ignore[no-any-return]
 
     def get_latest(self, env_id: int) -> sqlite3.Row | None:
         version = self.get_latest_version(env_id)

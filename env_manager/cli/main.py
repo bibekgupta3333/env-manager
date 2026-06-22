@@ -11,11 +11,14 @@ from env_manager.cli.commands import (
     info,
     lifecycle,
     list_cmd,
+    pin_cmd,
     plugin,
     scan,
     snapshots_cmd,
+    track_cmd,
     versions_cmd,
 )
+from env_manager.cli.commands.pin_cmd import toggle_pin
 
 app = typer.Typer(
     name="envs",
@@ -39,6 +42,17 @@ app.add_typer(cleanup_cmd.app, name="cleanup")
 app.add_typer(hook_cmd.app, name="hook")
 app.add_typer(db_cmd.app, name="db")
 app.add_typer(versions_cmd.app, name="versions")
+app.add_typer(pin_cmd.app, name="pin")
+app.add_typer(track_cmd.app, name="track")
+
+
+# Register unpin as a top-level alias
+@app.command(name="unpin")
+def unpin_cmd(
+    project: str = typer.Argument(..., help="Project to unpin"),
+) -> None:
+    """Unpin a project."""
+    toggle_pin(project, False)
 
 
 def main() -> None:

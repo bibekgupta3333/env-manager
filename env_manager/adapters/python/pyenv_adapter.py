@@ -11,6 +11,7 @@ from env_manager.models.env import (
     HealthResult,
     Package,
 )
+from env_manager.platform import find_vm_path
 
 
 class PythonPyenvAdapter(BaseAdapter):
@@ -20,14 +21,20 @@ class PythonPyenvAdapter(BaseAdapter):
     env_type = "global"
 
     def find_patterns(self) -> list[str]:
-        pyenv_root = Path.home() / ".pyenv" / "versions"
+        pyenv_root = (
+            find_vm_path("pyenv", "versions")
+            or Path.home() / ".pyenv" / "versions"
+        )
         if pyenv_root.exists():
             return [str(pyenv_root)]
         return ["**/.python-version"]
 
     def detect(self, path: Path) -> EnvMetadata | None:
         # pyenv global: ~/.pyenv/versions/3.12.0/
-        pyenv_root = Path.home() / ".pyenv" / "versions"
+        pyenv_root = (
+            find_vm_path("pyenv", "versions")
+            or Path.home() / ".pyenv" / "versions"
+        )
         if not pyenv_root.exists():
             return None
         try:
@@ -45,7 +52,7 @@ class PythonPyenvAdapter(BaseAdapter):
                     else "python3",
                     env_type="global",
                 )
-        except Exception:
+        except OSError:
             pass
         return None
 

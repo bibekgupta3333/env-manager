@@ -11,6 +11,7 @@ from env_manager.models.env import (
     HealthResult,
     Package,
 )
+from env_manager.platform import find_vm_path
 
 
 class GoGoenvAdapter(BaseAdapter):
@@ -26,7 +27,10 @@ class GoGoenvAdapter(BaseAdapter):
         go_ver = path / ".go-version"
         if go_ver.exists():
             version = go_ver.read_text().strip()
-            goenv_dir = Path.home() / ".goenv" / "versions" / version
+            goenv_dir = (
+                find_vm_path("goenv", "versions", version)
+                or Path.home() / ".goenv" / "versions" / version
+            )
             interpreter = (
                 str(goenv_dir / "bin" / "go") if goenv_dir.exists() else "go"
             )

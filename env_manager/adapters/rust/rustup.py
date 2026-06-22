@@ -11,6 +11,7 @@ from env_manager.models.env import (
     HealthResult,
     Package,
 )
+from env_manager.platform import find_vm_path
 
 
 class RustRustupAdapter(BaseAdapter):
@@ -32,7 +33,10 @@ class RustRustupAdapter(BaseAdapter):
         )
         if toolchain_file:
             version = toolchain_file.read_text().strip()
-            rustup_dir = Path.home() / ".rustup" / "toolchains"
+            rustup_dir = (
+                find_vm_path("rustup", "toolchains")
+                or Path.home() / ".rustup" / "toolchains"
+            )
             return EnvMetadata(
                 language="rust",
                 tool="rustup",

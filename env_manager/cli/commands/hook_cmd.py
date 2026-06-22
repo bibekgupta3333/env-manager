@@ -12,6 +12,8 @@ from env_manager.storage.database import (
     get_connection,
     init_db,
 )
+from env_manager.storage.repo_env import EnvironmentRepository
+from env_manager.storage.repo_project import ProjectRepository
 
 app = typer.Typer(help="Shell hook management for auto-detection on cd")
 
@@ -166,9 +168,6 @@ def _handle_ping(directory: str) -> None:
     init_db(db_path)
     conn = get_connection(db_path)
     try:
-        from env_manager.storage.repo_env import EnvironmentRepository
-        from env_manager.storage.repo_project import ProjectRepository
-
         env_repo = EnvironmentRepository(conn)
         proj_repo = ProjectRepository(conn)
         resolved = str(Path(directory).resolve())
@@ -178,7 +177,7 @@ def _handle_ping(directory: str) -> None:
         proj = proj_repo.get_by_path(resolved)
         if proj:
             proj_repo.touch(proj["id"])
-    except Exception:
+    except OSError:
         pass
     finally:
         conn.close()

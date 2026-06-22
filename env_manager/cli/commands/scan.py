@@ -42,8 +42,8 @@ def scan(
         adapters = registry.get_all_enabled()
 
         if not adapters:
-            typer.echo("No adapters enabled.")
-            typer.echo("Enable one: envs plugins enable python.venv")
+            typer.echo("no adapters enabled")
+            typer.echo("enable one: envs plugins enable python.venv")
             raise typer.Exit(1)
 
         scan_paths = path if path else DEFAULT_SCAN_PATHS

@@ -49,7 +49,7 @@ assert_exit() {
 run_envs() {
     cd "$PROJECT_ROOT"
     local code=0
-    python -m env_manager.cli.main "$@" 2>&1 || code=$?
+    envs "$@" 2>&1 || code=$?
     echo "EXIT:$code"
 }
 

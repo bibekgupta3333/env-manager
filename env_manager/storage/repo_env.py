@@ -1,6 +1,6 @@
 """Repository for environment CRUD operations."""
 
-# mypy: disable_error_code = no-any-return
+from __future__ import annotations
 
 import json
 import sqlite3
@@ -10,7 +10,7 @@ from env_manager.models.states import DiscoveryStatus, ManagementState
 
 
 class EnvironmentRepository:
-    def __init__(self, conn: sqlite3.Connection):
+    def __init__(self, conn: sqlite3.Connection) -> None:
         self.conn = conn
 
     def insert(
@@ -52,14 +52,16 @@ class EnvironmentRepository:
         return cursor.lastrowid
 
     def get_by_id(self, env_id: int) -> sqlite3.Row | None:
-        return self.conn.execute(
+        row = self.conn.execute(
             "SELECT * FROM environments WHERE id = ?", (env_id,)
         ).fetchone()
+        return row  # type: ignore[no-any-return]
 
     def get_by_path(self, path: str) -> sqlite3.Row | None:
-        return self.conn.execute(
+        row = self.conn.execute(
             "SELECT * FROM environments WHERE path = ?", (path,)
         ).fetchone()
+        return row  # type: ignore[no-any-return]
 
     def list_all(self) -> list[sqlite3.Row]:
         return self.conn.execute(
@@ -165,6 +167,15 @@ class EnvironmentRepository:
         self.conn.execute(
             "UPDATE environments SET is_orphaned = ? WHERE id = ?",
             (int(orphaned), env_id),
+        )
+        self.conn.commit()
+
+    def update_metadata(
+        self, env_id: int, metadata: dict[str, Any]
+    ) -> None:
+        self.conn.execute(
+            "UPDATE environments SET metadata = ? WHERE id = ?",
+            (json.dumps(metadata), env_id),
         )
         self.conn.commit()
 

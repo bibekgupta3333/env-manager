@@ -5,6 +5,7 @@ from pathlib import Path
 
 from fastapi import FastAPI
 from fastapi.responses import FileResponse
+from fastapi.staticfiles import StaticFiles
 
 from env_manager.cli.db_utils import ensure_db_dir, get_db_path
 from env_manager.daemon.api import (
@@ -18,7 +19,7 @@ from env_manager.daemon.api import (
 from env_manager.daemon.scheduler import start_scheduler, stop_scheduler
 from env_manager.storage.database import init_db
 
-DASHBOARD_DIR = Path(__file__).parent.parent / "dashboard"
+DASHBOARD_DIR = Path(__file__).parent.parent / "dashboard" / "dist"
 
 
 @asynccontextmanager
@@ -51,14 +52,19 @@ async def status():
     return {"status": "ok", "version": "0.1.0"}
 
 
-# Dashboard — serve via FileResponse route, not mount.
-# Starlette mount at "/" catches all paths including /api/*.
+# Serve dashboard index at root, static assets at /assets/
+assets_dir = DASHBOARD_DIR / "assets"
+if DASHBOARD_DIR.exists() and assets_dir.exists():
+    app.mount(
+        "/assets",
+        StaticFiles(directory=str(assets_dir)),
+        name="assets",
+    )
+
+
 @app.get("/")
 async def dashboard():
     index = DASHBOARD_DIR / "index.html"
     if index.exists():
         return FileResponse(index)
-    return {
-        "message": "Dashboard not available",
-        "hint": "check DASHBOARD_DIR",
-    }
+    return {"message": "Dashboard not available"}

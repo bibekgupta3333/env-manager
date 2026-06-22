@@ -6,6 +6,7 @@ from abc import ABC, abstractmethod
 from pathlib import Path
 from typing import Any
 
+from env_manager.exceptions import AdapterError
 from env_manager.models.env import (
     EnvMetadata,
     FreezeResult,
@@ -14,10 +15,8 @@ from env_manager.models.env import (
 )
 
 
-class InspectError(Exception):
+class InspectError(AdapterError):
     """Raised when an adapter cannot inspect an environment."""
-
-    pass
 
 
 class BaseAdapter(ABC):

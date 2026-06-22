@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 from pathlib import Path
 
 from env_manager.adapters.base import BaseAdapter
@@ -11,6 +12,7 @@ from env_manager.models.env import (
     HealthResult,
     Package,
 )
+from env_manager.platform import find_vm_path
 
 
 class NodeVoltaAdapter(BaseAdapter):
@@ -20,7 +22,7 @@ class NodeVoltaAdapter(BaseAdapter):
     env_type = "global"
 
     def find_patterns(self) -> list[str]:
-        volta_dir = Path.home() / ".volta"
+        volta_dir = find_vm_path("volta") or Path.home() / ".volta"
         if volta_dir.exists():
             return [
                 str(volta_dir / "tools" / "image" / "node"),
@@ -33,8 +35,6 @@ class NodeVoltaAdapter(BaseAdapter):
         pkg = path / "package.json"
         if pkg.exists():
             try:
-                import json
-
                 data = json.loads(pkg.read_text())
                 volta = data.get("volta", {})
                 node_ver = volta.get("node", "unknown")
@@ -48,7 +48,7 @@ class NodeVoltaAdapter(BaseAdapter):
                         interpreter_path="node",
                         env_type="global",
                     )
-            except Exception:
+            except (json.JSONDecodeError, OSError, UnicodeDecodeError):
                 pass
         return None
 

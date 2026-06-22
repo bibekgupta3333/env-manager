@@ -63,7 +63,7 @@ class AsdfAdapter(BaseAdapter):
                         interpreter_path=lang,
                         env_type="global",
                     )
-        except Exception:
+        except (OSError, UnicodeDecodeError):
             pass
         return None
 

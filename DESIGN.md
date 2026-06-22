@@ -69,6 +69,7 @@ Six concrete problems every developer with 50+ projects faces:
 | 11 | **Localhost dashboard** | Visual web UI at localhost — browse, filter, batch-manage 1000+ envs |
 | 12 | **Plugin architecture** | `pip install envs-plugin-java` — community adapters for any language |
 | 13 | **Zero dependencies** | Self-contained binary. No Python/Docker/Nix required to run. |
+| 14 | **Language version listing** | `envs versions` — show all available language runtimes and versions |
 
 ---
 
@@ -320,6 +321,7 @@ class HealthResult:
 | Ruby | rvm | global | `~/.rvm/rubies/*` |
 | Go | goenv | global | `~/.goenv/versions/*` |
 | Rust | rustup | global | `~/.rustup/toolchains/*` |
+| Universal | asdf | global | `~/.asdf/installs/*` |
 
 ---
 
@@ -473,6 +475,9 @@ envs list --snapshots
 envs info <project>
     Detailed view: version, size, packages count, last used, health, snapshots.
 
+envs versions [--lang python]
+    Show available language runtimes and versions across all adapters.
+
 envs track <path>
     Register a path for tracking.
 
@@ -533,6 +538,9 @@ envs unpin <project>
 envs cleanup [--stale N] [--orphaned] [--snapshot] [--dry-run] [--confirm]
     Batch cleanup of stale/orphaned environments.
 
+envs cleanup compare <project-a> <project-b>
+    Diff two environments (alias for envs diff).
+
 envs gc [--dry-run] [--confirm]
     Full garbage collection. Purges all soft-deleted environments.
 
@@ -544,6 +552,19 @@ envs snapshots prune [project] [--keep N]
 
 envs db backup [--path]
     Backup SQLite database to safe location.
+
+envs db restore [--path]
+    Restore database from backup file.
+
+envs db path
+    Show the database file path.
+
+envs db repair
+    Check and repair database integrity.
+
+envs hook --install
+envs hook --uninstall
+    Install/uninstall shell integration (bash/zsh/fish) for automatic environment tracking.
 ```
 
 ### Plugin & Language Config Commands
@@ -796,6 +817,7 @@ $ envs gc --confirm
 - Scan, list, info, track, ignore
 - Create, shell, install, uninstall, update, delete, restore, clone
 - Doctor, cleanup, gc, diff, pin/unpin
+- `envs versions`, `envs db backup/restore/path/repair`, `envs hook`, `envs cleanup compare`
 - Snapshot + restore (versioned, append-only)
 - 5 built-in adapters (Python, Node, Ruby, Go, Rust — 15 tools)
 - Community plugin support (`pip install envs-plugin-*`)

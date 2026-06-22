@@ -1,13 +1,13 @@
 """Repository for project CRUD operations."""
 
-# mypy: disable_error_code = no-any-return
+from __future__ import annotations
 
 import json
 import sqlite3
 
 
 class ProjectRepository:
-    def __init__(self, conn: sqlite3.Connection):
+    def __init__(self, conn: sqlite3.Connection) -> None:
         self.conn = conn
 
     def insert(
@@ -22,14 +22,16 @@ class ProjectRepository:
         return cursor.lastrowid
 
     def get_by_id(self, project_id: int) -> sqlite3.Row | None:
-        return self.conn.execute(
+        row = self.conn.execute(
             "SELECT * FROM projects WHERE id = ?", (project_id,)
         ).fetchone()
+        return row  # type: ignore[no-any-return]
 
     def get_by_path(self, path: str) -> sqlite3.Row | None:
-        return self.conn.execute(
+        row = self.conn.execute(
             "SELECT * FROM projects WHERE path = ?", (path,)
         ).fetchone()
+        return row  # type: ignore[no-any-return]
 
     def get_or_create(self, name: str, path: str) -> tuple[int, bool]:
         existing = self.get_by_path(path)

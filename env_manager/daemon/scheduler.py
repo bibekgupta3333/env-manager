@@ -1,8 +1,11 @@
 """Background scheduler for periodic scans."""
 
+import logging
 import threading
 
 from apscheduler.schedulers.background import BackgroundScheduler
+
+logger = logging.getLogger(__name__)
 
 _scheduler: BackgroundScheduler | None = None
 _scheduler_lock = threading.Lock()
@@ -46,4 +49,4 @@ def _run_periodic_scan(db_path: str) -> None:
         scanner = Scanner(conn, adapters)
         scanner.scan(str(Path.home() / "projects"), depth=3)
     except Exception:
-        pass  # Don't crash the scheduler on scan errors
+        logger.debug("periodic scan failed", exc_info=True)

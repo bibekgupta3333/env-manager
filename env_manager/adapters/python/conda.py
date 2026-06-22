@@ -11,6 +11,7 @@ from env_manager.models.env import (
     HealthResult,
     Package,
 )
+from env_manager.platform import find_vm_path
 
 
 class PythonCondaAdapter(BaseAdapter):
@@ -20,6 +21,9 @@ class PythonCondaAdapter(BaseAdapter):
     env_type = "global"
 
     def find_patterns(self) -> list[str]:
+        conda_root = find_vm_path("conda")
+        if conda_root and (conda_root / "envs").exists():
+            return [str(conda_root / "envs")]
         home = Path.home()
         patterns = []
         conda_dirs = [
@@ -44,7 +48,7 @@ class PythonCondaAdapter(BaseAdapter):
                             if len(parts) > 1:
                                 version = parts[1]
                                 break
-                except Exception:
+                except (OSError, UnicodeDecodeError):
                     pass
             return EnvMetadata(
                 language="python",

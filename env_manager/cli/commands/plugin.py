@@ -41,7 +41,7 @@ def enable_plugin(
     if registry.enable(name):
         typer.echo(f"Enabled: {name}")
     else:
-        typer.echo(f"Adapter not found: {name}")
+        typer.echo(f"adapter not found: {name}")
         conn.close()
         raise typer.Exit(1)
 
@@ -62,7 +62,7 @@ def disable_plugin(
     if registry.disable(name):
         typer.echo(f"Disabled: {name}")
     else:
-        typer.echo(f"Adapter not found or already disabled: {name}")
+        typer.echo(f"adapter not found or already disabled: {name}")
         conn.close()
         raise typer.Exit(1)
 

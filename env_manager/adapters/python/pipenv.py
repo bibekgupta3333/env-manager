@@ -63,7 +63,7 @@ class PythonPipenvAdapter(BaseAdapter):
                 line = line.strip()
                 if line.startswith("python_version"):
                     return line.split("=")[-1].strip().strip('"').strip("'")
-        except Exception:
+        except (OSError, UnicodeDecodeError):
             pass
         return "unknown"
 

@@ -23,8 +23,8 @@ from env_manager.storage.repo_snapshot import SnapshotRepository
 app = typer.Typer(help="Clean up stale and orphaned environments")
 
 
-@app.command()
-def run(
+@app.callback(invoke_without_command=True)
+def cleanup(
     stale_days: int = typer.Option(
         60, "--stale", "-s", help="Days since last use to consider stale"
     ),
@@ -77,13 +77,13 @@ def run(
         candidates = filtered
 
         if not candidates:
-            typer.echo("No environments to clean up.")
+            typer.echo("no environments to clean up")
             return
 
         total_size = sum(e.get("size_bytes", 0) for e in candidates)
 
         if dry_run:
-            typer.echo(f"Would process {len(candidates)} environments:")
+            typer.echo(f"would process {len(candidates)} environments:")
             action = "snapshot + delete" if snapshot else "delete"
             for env in candidates:
                 proj = (
@@ -117,7 +117,7 @@ def run(
                             raw_lockfile=freeze_result.raw_content,
                             lockfile_format=freeze_result.format,
                         )
-                    except Exception:
+                    except (OSError, ValueError):
                         pass
 
             env_repo.update_state(
@@ -210,7 +210,9 @@ def compare(
         proj_repo = ProjectRepository(conn)
         registry = AdapterRegistry(conn)
 
-        def _get_packages(identifier: str) -> tuple[Any, dict[str, Any]]:
+        def _get_packages(
+            identifier: str,
+        ) -> tuple[Any, dict[str, str]]:
             env = env_repo.get_by_path(identifier)
             if not env:
                 resolved = str(Path(identifier).resolve())

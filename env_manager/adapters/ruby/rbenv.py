@@ -11,6 +11,7 @@ from env_manager.models.env import (
     HealthResult,
     Package,
 )
+from env_manager.platform import find_vm_path
 
 
 class RubyRbenvAdapter(BaseAdapter):
@@ -26,7 +27,10 @@ class RubyRbenvAdapter(BaseAdapter):
         ruby_ver = path / ".ruby-version"
         if ruby_ver.exists():
             version = ruby_ver.read_text().strip()
-            rbenv_dir = Path.home() / ".rbenv" / "versions" / version
+            rbenv_dir = (
+                find_vm_path("rbenv", "versions", version)
+                or Path.home() / ".rbenv" / "versions" / version
+            )
             interpreter = (
                 str(rbenv_dir / "bin" / "ruby")
                 if rbenv_dir.exists()

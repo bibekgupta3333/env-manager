@@ -1,12 +1,14 @@
 """Repository for activity log operations."""
 
+from __future__ import annotations
+
 import json
 import sqlite3
 from typing import Any
 
 
 class ActivityRepository:
-    def __init__(self, conn: sqlite3.Connection):
+    def __init__(self, conn: sqlite3.Connection) -> None:
         self.conn = conn
 
     def log(

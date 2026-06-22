@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 import subprocess
 from pathlib import Path
 from typing import Any
@@ -61,12 +62,10 @@ class NodeNvmAdapter(BaseAdapter):
         # package.json → Node project
         if pkg_json.exists():
             try:
-                import json
-
                 data = json.loads(pkg_json.read_text())
                 engines = data.get("engines", {})
                 version = str(engines.get("node", "unknown"))
-            except Exception:
+            except (json.JSONDecodeError, OSError, UnicodeDecodeError):
                 version = "unknown"
 
             size = (
@@ -118,15 +117,14 @@ class NodeNvmAdapter(BaseAdapter):
                 timeout=30,
             )
             if result.returncode == 0 and result.stdout.strip():
-                import json
-
                 data = json.loads(result.stdout)
                 deps = data.get("dependencies", {})
                 return [
                     Package(name=k, version=v.get("version", "unknown"))
                     for k, v in deps.items()
                 ]
-        except Exception:
+        except (subprocess.TimeoutExpired, subprocess.SubprocessError,
+                json.JSONDecodeError, OSError):
             pass
         return []
 
@@ -156,7 +154,8 @@ class NodeNvmAdapter(BaseAdapter):
                 timeout=10,
             )
             checks.append({"name": "node_binary", "passed": r.returncode == 0})
-        except Exception as e:
+        except (subprocess.TimeoutExpired, subprocess.SubprocessError,
+                OSError, ValueError) as e:
             errors.append(str(e))
 
         status = "healthy" if len(errors) == 0 else "broken"
@@ -171,7 +170,8 @@ class NodeNvmAdapter(BaseAdapter):
                 timeout=10,
             )
             return r.stdout.strip().lstrip("v")
-        except Exception:
+        except (subprocess.TimeoutExpired, subprocess.SubprocessError,
+                FileNotFoundError, OSError):
             return "unknown"
 
     def _find_node(self, path: Path) -> str:

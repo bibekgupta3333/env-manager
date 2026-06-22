@@ -12,6 +12,7 @@ import typer
 
 from env_manager.adapters.registry import AdapterRegistry
 from env_manager.cli.db_utils import ensure_db_dir, get_db_path
+from env_manager.cli.resolve import resolve_env
 from env_manager.models.states import ManagementState
 from env_manager.storage.database import (
     close_connection,
@@ -63,7 +64,7 @@ def create(
         if createable:
             adapters = createable
         if not adapters:
-            typer.echo(f"No adapter for {language}")
+            typer.echo(f"no adapter for {language}")
             raise typer.Exit(1)
 
         adapter = adapters[0]
@@ -122,7 +123,7 @@ def install(
     conn = get_connection(db_path)
 
     try:
-        env = _resolve(conn, project)
+        env = resolve_env(conn, project)
         if not env:
             typer.echo(f"Not found: {project}")
             raise typer.Exit(1)
@@ -130,7 +131,7 @@ def install(
         registry = AdapterRegistry(conn)
         adapter = registry.get(env["adapter"])
         if not adapter:
-            typer.echo(f"No adapter: {env['adapter']}")
+            typer.echo(f"no adapter: {env['adapter']}")
             raise typer.Exit(1)
 
         if dry_run:
@@ -162,7 +163,7 @@ def uninstall(
     conn = get_connection(db_path)
 
     try:
-        env = _resolve(conn, project)
+        env = resolve_env(conn, project)
         if not env:
             typer.echo(f"Not found: {project}")
             raise typer.Exit(1)
@@ -170,7 +171,7 @@ def uninstall(
         registry = AdapterRegistry(conn)
         adapter = registry.get(env["adapter"])
         if not adapter:
-            typer.echo(f"No adapter: {env['adapter']}")
+            typer.echo(f"no adapter: {env['adapter']}")
             raise typer.Exit(1)
 
         if dry_run:
@@ -205,7 +206,7 @@ def update(
     conn = get_connection(db_path)
 
     try:
-        env = _resolve(conn, project)
+        env = resolve_env(conn, project)
         if not env:
             typer.echo(f"Not found: {project}")
             raise typer.Exit(1)
@@ -213,7 +214,7 @@ def update(
         registry = AdapterRegistry(conn)
         adapter = registry.get(env["adapter"])
         if not adapter:
-            typer.echo(f"No adapter: {env['adapter']}")
+            typer.echo(f"no adapter: {env['adapter']}")
             raise typer.Exit(1)
 
         if dry_run:
@@ -247,7 +248,7 @@ def remove(
     conn = get_connection(db_path)
 
     try:
-        env = _resolve(conn, project)
+        env = resolve_env(conn, project)
         if not env:
             typer.echo(f"Not found: {project}")
             raise typer.Exit(1)
@@ -271,7 +272,7 @@ def remove(
                         raw_lockfile=fr.raw_content,
                         lockfile_format=fr.format,
                     )
-                except Exception:
+                except (OSError, ValueError):
                     pass
 
         env_repo = EnvironmentRepository(conn)
@@ -325,7 +326,7 @@ def restore(
         ]
 
         if not matching:
-            typer.echo(f"No snapshots for: {project}")
+            typer.echo(f"no snapshots for: {project}")
             raise typer.Exit(1)
 
         target = matching[0]
@@ -349,7 +350,7 @@ def restore(
         registry = AdapterRegistry(conn)
         adapter = registry.get(env["adapter"])
         if not adapter:
-            typer.echo(f"No adapter: {env['adapter']}")
+            typer.echo(f"no adapter: {env['adapter']}")
             raise typer.Exit(1)
 
         deps = json.loads(target["frozen_deps"])
@@ -380,7 +381,7 @@ def clone(
     conn = get_connection(db_path)
 
     try:
-        env = _resolve(conn, source)
+        env = resolve_env(conn, source)
         if not env:
             typer.echo(f"Not found: {source}")
             raise typer.Exit(1)
@@ -392,7 +393,7 @@ def clone(
         registry = AdapterRegistry(conn)
         adapter = registry.get(env["adapter"])
         if not adapter:
-            typer.echo(f"No adapter: {env['adapter']}")
+            typer.echo(f"no adapter: {env['adapter']}")
             raise typer.Exit(1)
 
         adapter.clone(Path(env["path"]), Path(destination).resolve())
@@ -414,7 +415,7 @@ def export_spec(
     conn = get_connection(db_path)
 
     try:
-        env = _resolve(conn, project)
+        env = resolve_env(conn, project)
         if not env:
             typer.echo(f"Not found: {project}")
             raise typer.Exit(1)
@@ -476,7 +477,7 @@ def import_spec(
         registry = AdapterRegistry(conn)
         adapters = registry.get_for_language(lang)
         if not adapters:
-            typer.echo(f"No adapter for {lang}")
+            typer.echo(f"no adapter for {lang}")
             raise typer.Exit(1)
 
         adapter = adapters[0]
@@ -499,7 +500,7 @@ def shell(
     conn = get_connection(db_path)
 
     try:
-        env = _resolve(conn, project)
+        env = resolve_env(conn, project)
         if not env:
             typer.echo(f"Not found: {project}")
             raise typer.Exit(1)
@@ -521,7 +522,7 @@ def shell(
                 )
                 return
 
-        typer.echo(f"No shell support for {lang}")
+        typer.echo(f"no shell support for {lang}")
     finally:
         conn.close()
         close_connection(db_path)
@@ -541,7 +542,7 @@ def activate(
     conn = get_connection(db_path)
 
     try:
-        env = _resolve(conn, project)
+        env = resolve_env(conn, project)
         if not env:
             if sys.stdout.isatty():
                 typer.echo(f"Environment not found: {project}", err=True)
@@ -588,37 +589,6 @@ def activate(
 
 
 # ── helpers ────────────────────────────────────────────
-
-
-def _resolve(conn, identifier):
-    env_repo = EnvironmentRepository(conn)
-    proj_repo = ProjectRepository(conn)
-
-    # Try direct path
-    env = env_repo.get_by_path(identifier)
-    if env:
-        return env
-
-    # Try resolved path (macOS /tmp → /private/tmp)
-    resolved = str(Path(identifier).resolve())
-    if resolved != identifier:
-        env = env_repo.get_by_path(resolved)
-        if env:
-            return env
-
-    # Try project by path (including resolved)
-    proj = proj_repo.get_by_path(identifier)
-    if not proj:
-        proj = proj_repo.get_by_path(resolved)
-    if not proj:
-        all_p = proj_repo.list_all()
-        proj = next((p for p in all_p if p["name"] == identifier), None)
-
-    if proj:
-        envs = env_repo.list_by_project(proj["id"])
-        if envs:
-            return envs[0]
-    return None
 
 
 def _env_matches_snap(conn, snap, identifier):

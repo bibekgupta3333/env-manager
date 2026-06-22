@@ -9,6 +9,7 @@ from pathlib import Path
 from typing import Any
 
 from env_manager.adapters.base import BaseAdapter
+from env_manager.exceptions import AdapterError  # noqa: F401
 from env_manager.models.env import (
     EnvMetadata,
     FreezeResult,
@@ -113,7 +114,8 @@ class PythonVenvAdapter(BaseAdapter):
             )
             if r.returncode != 0:
                 errors.append(f"python --version failed: {r.stderr}")
-        except Exception as e:
+        except (subprocess.TimeoutExpired, subprocess.SubprocessError,
+                OSError) as e:
             checks.append({"name": "python_binary", "passed": False})
             errors.append(str(e))
 
@@ -127,7 +129,8 @@ class PythonVenvAdapter(BaseAdapter):
             checks.append({"name": "import_test", "passed": r.returncode == 0})
             if r.returncode != 0:
                 errors.append(f"Import test failed: {r.stderr}")
-        except Exception as e:
+        except (subprocess.TimeoutExpired, subprocess.SubprocessError,
+                OSError) as e:
             checks.append({"name": "import_test", "passed": False})
             errors.append(str(e))
 
@@ -165,9 +168,9 @@ class PythonVenvAdapter(BaseAdapter):
             except (subprocess.CalledProcessError, FileNotFoundError):
                 continue
         else:
-            raise RuntimeError(
-                f"Cannot create venv: no python binary "
-                f"(tried {candidates})"
+            raise AdapterError(
+                f"cannot create venv: no python binary "
+                f"(tried {', '.join(candidates)})"
             )
         return self.inspect(path)
 

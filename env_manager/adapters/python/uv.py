@@ -34,7 +34,7 @@ class PythonUvAdapter(BaseAdapter):
                 content = toml.read_text()
                 if "uv" in content.lower():
                     is_uv = True
-            except Exception:
+            except (OSError, UnicodeDecodeError):
                 pass
 
         if not is_uv and not (ver_file.exists() and venv_dir.exists()):

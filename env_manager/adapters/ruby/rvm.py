@@ -11,6 +11,7 @@ from env_manager.models.env import (
     HealthResult,
     Package,
 )
+from env_manager.platform import find_vm_path
 
 
 class RubyRvmAdapter(BaseAdapter):
@@ -20,13 +21,15 @@ class RubyRvmAdapter(BaseAdapter):
     env_type = "global"
 
     def find_patterns(self) -> list[str]:
-        rvm_dir = Path.home() / ".rvm" / "rubies"
+        rvm_base = find_vm_path("rvm") or Path.home() / ".rvm"
+        rvm_dir = rvm_base / "rubies"
         if rvm_dir.exists():
             return [str(rvm_dir)]
         return ["**/.ruby-version", "**/Gemfile"]
 
     def detect(self, path: Path) -> EnvMetadata | None:
-        rvm_root = Path.home() / ".rvm" / "rubies"
+        rvm_base = find_vm_path("rvm") or Path.home() / ".rvm"
+        rvm_root = rvm_base / "rubies"
         if rvm_root.exists() and str(path).startswith(str(rvm_root)):
             version = path.name
             return EnvMetadata(
