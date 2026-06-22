@@ -12,6 +12,7 @@ from env_manager.cli.commands import (
     plugin,
     scan,
     snapshots_cmd,
+    versions_cmd,
 )
 
 __all__ = [
@@ -26,4 +27,5 @@ __all__ = [
     "cleanup_cmd",
     "hook_cmd",
     "db_cmd",
+    "versions_cmd",
 ]

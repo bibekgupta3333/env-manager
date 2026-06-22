@@ -61,6 +61,8 @@ ignore = ["B008", "B904"]
 
 [tool.ruff.lint.per-file-ignores]
 "env_manager/**/hook_cmd.py" = ["E501"]
+"env_manager/**/asdf/*.py" = ["E501"]
+"env_manager/**/versions_cmd.py" = ["E501"]
 
 [tool.mypy]
 python_version = "3.10"
@@ -76,4 +78,3 @@ disable_error_code = ["no-untyped-def", "attr-defined", "no-untyped-call"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
-asyncio_mode = "auto"

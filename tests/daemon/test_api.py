@@ -1,9 +1,17 @@
-"""Tests for daemon and API endpoints."""
+"""Tests for daemon and API endpoints.
+
+Requires FastAPI + httpx. Skipped if not installed.
+"""
 
 import pytest
-from fastapi.testclient import TestClient
 
-from env_manager.daemon.server import app
+try:
+    from fastapi.testclient import TestClient
+
+    from env_manager.daemon.server import app
+except ImportError:
+    pytest.skip("fastapi or httpx not installed", allow_module_level=True)
+
 from env_manager.storage.database import init_db
 
 
@@ -36,23 +44,7 @@ class TestStatusEndpoint:
         assert data["status"] == "ok"
 
 
-class TestEnvsEndpoint:
-    pass  # Requires DB seeding — tested via E2E
-
-
-class TestProjectsEndpoint:
-    pass  # Requires DB seeding — tested via E2E
-
-
 class TestHealthEndpoint:
     def test_health(self, client):
         resp = client.get("/api/health")
         assert resp.status_code == 200
-
-
-class TestPluginsEndpoint:
-    pass  # Requires seeded DB — tested via CLI
-
-
-class TestSnapshotsEndpoint:
-    pass  # Requires seeded DB — tested via CLI

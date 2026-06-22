@@ -172,6 +172,7 @@ def version_manager_paths() -> dict[str, list[str]]:
         "pyenv": [f"{home}/.pyenv"],
         "rbenv": [f"{home}/.rbenv"],
         "rvm": [f"{home}/.rvm"],
+        "asdf": [f"{home}/.asdf"],
         "conda": [
             f"{home}/anaconda3",
             f"{home}/miniconda3",

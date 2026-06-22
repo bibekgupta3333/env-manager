@@ -11,6 +11,7 @@ from env_manager.models.env import (
     HealthResult,
     Package,
 )
+from env_manager.platform import find_vm_path
 
 
 class NodeFnmAdapter(BaseAdapter):
@@ -26,7 +27,9 @@ class NodeFnmAdapter(BaseAdapter):
         node_ver = path / ".node-version"
         if node_ver.exists():
             version = node_ver.read_text().strip()
-            fnm_dir = Path.home() / ".fnm" / "node-versions" / f"v{version}"
+            fnm_dir = find_vm_path("fnm", "node-versions", f"v{version}") or (
+                Path.home() / ".fnm" / "node-versions" / f"v{version}"
+            )
             interpreter = (
                 str(fnm_dir / "installation" / "bin" / "node")
                 if fnm_dir.exists()

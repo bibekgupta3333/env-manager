@@ -14,6 +14,7 @@ from env_manager.cli.commands import (
     plugin,
     scan,
     snapshots_cmd,
+    versions_cmd,
 )
 
 app = typer.Typer(
@@ -37,6 +38,7 @@ app.add_typer(snapshots_cmd.app, name="snapshots")
 app.add_typer(cleanup_cmd.app, name="cleanup")
 app.add_typer(hook_cmd.app, name="hook")
 app.add_typer(db_cmd.app, name="db")
+app.add_typer(versions_cmd.app, name="versions")
 
 
 def main() -> None:

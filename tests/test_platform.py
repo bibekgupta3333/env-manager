@@ -95,23 +95,16 @@ class TestFindVmPath:
         result = find_vm_path("nvm", "nonexistent", "path", "xyz")
         assert result is None
 
-    def test_returns_path_for_existing(self, tmp_path):
-        # Create a fake nvm install
+    def test_returns_path_for_existing(self, tmp_path, monkeypatch):
         nvm_dir = tmp_path / ".nvm" / "versions" / "node" / "v20.0.0"
         nvm_dir.mkdir(parents=True)
-
-        # Monkey-patch version_manager_paths for this test
-        import env_manager.platform as plat
-        original = plat.version_manager_paths
-        plat.version_manager_paths = lambda: {
-            "nvm": [str(tmp_path / ".nvm")]
-        }
-        try:
-            result = find_vm_path("nvm", "versions", "node", "v20.0.0")
-            assert result is not None
-            assert result.exists()
-        finally:
-            plat.version_manager_paths = original
+        monkeypatch.setattr(
+            "env_manager.platform.version_manager_paths",
+            lambda: {"nvm": [str(tmp_path / ".nvm")]},
+        )
+        result = find_vm_path("nvm", "versions", "node", "v20.0.0")
+        assert result is not None
+        assert result.exists()
 
 
 class TestActivateCmd:
