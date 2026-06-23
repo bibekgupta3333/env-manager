@@ -565,11 +565,21 @@ def activate(
         activate_line = ""
 
         if lang == "python":
-            activate_script = env_path / "bin" / "activate"
+            bin_dir = "Scripts" if os.name == "nt" else "bin"
+            activate_script = env_path / bin_dir / "activate"
             if activate_script.exists():
                 activate_line = f"source {activate_script}"
+            else:
+                bat = env_path / bin_dir / "activate.bat"
+                if bat.exists():
+                    activate_line = str(bat)
         elif lang == "node":
-            activate_line = f"export PATH='{env_path}/bin:$PATH'"
+            bin_dir = "Scripts" if os.name == "nt" else "bin"
+            activate_line = (
+                f"set PATH={env_path / bin_dir};%PATH%"
+                if os.name == "nt"
+                else f"export PATH='{env_path / bin_dir}:$PATH'"
+            )
 
         if not activate_line:
             msg = f"echo 'No activation support for {lang}' >&2; return 1"

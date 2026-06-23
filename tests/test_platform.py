@@ -1,6 +1,5 @@
 """Tests for cross-platform utilities."""
 
-import sys
 from pathlib import Path
 
 from env_manager.platform import (
@@ -62,9 +61,13 @@ class TestSystemExcludes:
 
     def test_contains_common(self):
         excl = system_excludes()
-        assert "/proc" in excl
-        assert "/sys" in excl
-        assert "/dev" in excl
+        if is_windows():
+            assert "C:\\Windows" in excl
+            assert "C:\\Program Files" in excl
+        else:
+            assert "/proc" in excl
+            assert "/sys" in excl
+            assert "/dev" in excl
 
 
 class TestVersionManagerPaths:
@@ -118,9 +121,14 @@ class TestActivateCmd:
     def test_python_venv_activate(self, tmp_path):
         venv = tmp_path / ".venv"
         venv.mkdir()
-        bin_dir = venv / "bin"
-        bin_dir.mkdir()
-        (bin_dir / "activate").touch()
+        if is_windows():
+            scripts = venv / "Scripts"
+            scripts.mkdir()
+            (scripts / "activate.bat").touch()
+        else:
+            bindir = venv / "bin"
+            bindir.mkdir()
+            (bindir / "activate").touch()
 
         cmd = get_activate_cmd(venv, "python")
         assert cmd is not None
@@ -133,14 +141,12 @@ class TestActivateCmd:
     def test_node_activate(self, tmp_path):
         proj = tmp_path / "node-proj"
         proj.mkdir()
-        bin_dir = proj / "bin"
-        bin_dir.mkdir()
+        bindir = proj / ("Scripts" if is_windows() else "bin")
+        bindir.mkdir()
 
         cmd = get_activate_cmd(proj, "node")
-        if sys.platform == "win32":
-            assert cmd is not None
-        else:
-            assert cmd is not None
+        assert cmd is not None
+        if not is_windows():
             assert "PATH" in cmd
 
     def test_unknown_language(self, tmp_path):

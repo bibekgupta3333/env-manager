@@ -1,6 +1,7 @@
 """Integration tests for CLI lifecycle commands using real venvs."""
 
 import json
+import os
 import sys
 
 import pytest
@@ -115,13 +116,16 @@ def test_export_spec(runner, created_env):
 
 
 def test_activate(runner, created_env):
-    """lifecycle activate <tmp>/proj outputs 'source' in result."""
+    """lifecycle activate <tmp>/proj outputs activation command."""
     result = runner.invoke(
         app,
         ["lifecycle", "activate", str(created_env)],
     )
     assert result.exit_code == 0
-    assert "source" in result.stdout
+    if os.name == "nt":
+        assert "activate" in result.stdout
+    else:
+        assert "source" in result.stdout
 
 
 def test_remove_snapshot(runner, created_env):

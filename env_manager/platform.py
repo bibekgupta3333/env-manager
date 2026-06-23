@@ -162,6 +162,7 @@ def version_manager_paths() -> dict[str, list[str]]:
                 f"{home}\\miniforge3",
             ],
             "rustup": [f"{home}\\.rustup"],
+            "goenv": [f"{home}\\.goenv"],
         }
     # Unix (macOS + Linux)
     linuxbrew = "/home/linuxbrew/.linuxbrew" if is_linux() else None
