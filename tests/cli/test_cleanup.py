@@ -26,9 +26,7 @@ class TestCleanup:
     def test_cleanup_dry_run(self, runner, db_path, tmp_path, monkeypatch):
         venv_path = tmp_path / "proj_stale" / ".venv"
         venv_path.parent.mkdir(parents=True, exist_ok=True)
-        subprocess.run(
-            ["python3", "-m", "venv", str(venv_path)], check=True
-        )
+        subprocess.run(["python3", "-m", "venv", str(venv_path)], check=True)
 
         from env_manager.cli.commands import scan as scan_mod
 
@@ -43,9 +41,7 @@ class TestCleanup:
         conn.commit()
         conn.close()
 
-        result = runner.invoke(
-            app, ["cleanup", "--stale", "365", "--dry-run"]
-        )
+        result = runner.invoke(app, ["cleanup", "--stale", "365", "--dry-run"])
         assert result.exit_code == 0
         assert "Would" in result.stdout
 
@@ -59,15 +55,11 @@ class TestCleanup:
     def test_cleanup_compare(self, runner, tmp_path, monkeypatch):
         venv_a = tmp_path / "proj_a" / ".venv"
         venv_a.parent.mkdir(parents=True, exist_ok=True)
-        subprocess.run(
-            ["python3", "-m", "venv", str(venv_a)], check=True
-        )
+        subprocess.run(["python3", "-m", "venv", str(venv_a)], check=True)
 
         venv_b = tmp_path / "proj_b" / ".venv"
         venv_b.parent.mkdir(parents=True, exist_ok=True)
-        subprocess.run(
-            ["python3", "-m", "venv", str(venv_b)], check=True
-        )
+        subprocess.run(["python3", "-m", "venv", str(venv_b)], check=True)
 
         from env_manager.cli.commands import scan as scan_mod
 

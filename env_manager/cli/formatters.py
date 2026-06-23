@@ -71,9 +71,7 @@ def format_env_list(
     console.print(table)
 
 
-def format_env_info(
-    env: EnvRowDict, *, json_output: bool = False
-) -> None:
+def format_env_info(env: EnvRowDict, *, json_output: bool = False) -> None:
     if json_output:
         sys.stdout.write(json.dumps(env) + "\n")
         return
@@ -89,9 +87,7 @@ def format_env_info(
     health = env.get("last_health_result")
     if health:
         color = _HEALTH_COLORS.get(health, "")
-        console.print(
-            f"  Health:    [{color}]{health}[/{color}]"
-        )
+        console.print(f"  Health:    [{color}]{health}[/{color}]")
 
 
 def _format_size(size_bytes: int) -> str:

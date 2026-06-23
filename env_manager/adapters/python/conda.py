@@ -27,8 +27,10 @@ class PythonCondaAdapter(BaseAdapter):
         home = Path.home()
         patterns = []
         conda_dirs = [
-            "anaconda3/envs", "miniconda3/envs",
-            "miniforge3/envs", "mambaforge/envs",
+            "anaconda3/envs",
+            "miniconda3/envs",
+            "miniforge3/envs",
+            "mambaforge/envs",
         ]
         for p in conda_dirs:
             if (home / p).exists():

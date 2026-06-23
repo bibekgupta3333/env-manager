@@ -35,7 +35,9 @@ def track(
         resolved = str(Path(path).resolve())
         existing = env_repo.get_by_path(resolved)
         if existing:
-            env_repo.update_discovery_status(existing["id"], DiscoveryStatus.TRACKED)
+            env_repo.update_discovery_status(
+                existing["id"], DiscoveryStatus.TRACKED
+            )
             typer.echo(f"Now tracking: {resolved}")
             return
 
@@ -44,15 +46,23 @@ def track(
         for adapter in adapters:
             meta = adapter.detect(Path(resolved))
             if meta:
-                proj_dir = Path(resolved).parent if adapter.env_type == "local" else Path(resolved)
+                proj_dir = (
+                    Path(resolved).parent
+                    if adapter.env_type == "local"
+                    else Path(resolved)
+                )
                 proj_id, _ = proj_repo.get_or_create(
                     name=proj_dir.name, path=str(proj_dir.resolve())
                 )
                 env_repo.insert(
-                    project_id=proj_id, adapter=adapter.name,
-                    env_type=adapter.env_type, path=resolved,
-                    language=meta.language, version=meta.version,
-                    tool=meta.tool, size_bytes=meta.size_bytes,
+                    project_id=proj_id,
+                    adapter=adapter.name,
+                    env_type=adapter.env_type,
+                    path=resolved,
+                    language=meta.language,
+                    version=meta.version,
+                    tool=meta.tool,
+                    size_bytes=meta.size_bytes,
                     discovery_status=DiscoveryStatus.TRACKED,
                 )
                 typer.echo(f"Tracked: {resolved} ({adapter.name})")
@@ -81,11 +91,15 @@ def ignore(
 
         existing = env_repo.get_by_path(resolved)
         if existing:
-            env_repo.update_discovery_status(existing["id"], DiscoveryStatus.IGNORED)
+            env_repo.update_discovery_status(
+                existing["id"], DiscoveryStatus.IGNORED
+            )
             typer.echo(f"Ignored: {resolved}")
         else:
             # Register as ignored even if not previously tracked
-            typer.echo(f"Path not tracked, but will be ignored in future scans: {resolved}")
+            typer.echo(
+                f"Path not tracked, but will be ignored in future scans: {resolved}"
+            )
     finally:
         conn.close()
         close_connection(db_path)

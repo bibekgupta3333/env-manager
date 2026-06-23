@@ -2,6 +2,7 @@
 
 import json
 import sqlite3
+from collections.abc import Callable
 from datetime import datetime
 from pathlib import Path
 from typing import Any
@@ -45,7 +46,11 @@ class Scanner:
         self.activity_repo = ActivityRepository(conn)
 
     def scan(
-        self, root_path: str, depth: int = 5, incremental: bool = False
+        self,
+        root_path: str,
+        depth: int = 5,
+        incremental: bool = False,
+        on_progress: Callable[[int, int], None] | None = None,
     ) -> list[EnvMetadata]:
         root = Path(root_path).expanduser().resolve()
         if not root.exists():
@@ -55,8 +60,9 @@ class Scanner:
         if incremental:
             last_scan = self._get_last_scan_time()
 
+        dirs_scanned = 0
         results: list[EnvMetadata] = []
-        self._walk(root, depth, results, last_scan)
+        self._walk(root, depth, results, last_scan, on_progress, dirs_scanned)
 
         self.activity_repo.log(
             event="scan_started",
@@ -113,9 +119,7 @@ class Scanner:
                     detail={
                         "path": str(env_path),
                         "missing_project_dir": str(proj_dir),
-                        "linked_to_project_id": (
-                            existing_env["project_id"]
-                        ),
+                        "linked_to_project_id": (existing_env["project_id"]),
                     },
                 )
                 return
@@ -185,9 +189,7 @@ class Scanner:
                     metadata["parent_env_id"] = parent_env["id"]
                     self.env_repo.update_metadata(env_id, metadata)
 
-    def _detect_shared_env(
-        self, env_path: str, project_id: int
-    ) -> None:
+    def _detect_shared_env(self, env_path: str, project_id: int) -> None:
         """Check if this environment path is shared with other projects.
 
         When the same venv path is associated with multiple projects
@@ -224,9 +226,7 @@ class Scanner:
             current_meta = json.loads(current_env["metadata"] or "{}")
             if current_meta.get("shared_with_project_ids") != all_project_ids:
                 current_meta["shared_with_project_ids"] = all_project_ids
-                self.env_repo.update_metadata(
-                    current_env["id"], current_meta
-                )
+                self.env_repo.update_metadata(current_env["id"], current_meta)
 
         self.activity_repo.log(
             event="shared_env_detected",
@@ -243,9 +243,15 @@ class Scanner:
         remaining_depth: int,
         results: list[EnvMetadata],
         last_scan: str | None = None,
+        on_progress: Callable[[int, int], None] | None = None,
+        dirs_scanned: int = 0,
     ) -> None:
         if remaining_depth <= 0:
             return
+
+        dirs_scanned += 1
+        if on_progress and dirs_scanned % 50 == 0:
+            on_progress(dirs_scanned, len(results))
 
         if directory.name in DEFAULT_EXCLUDES:
             return
@@ -277,6 +283,13 @@ class Scanner:
         try:
             for entry in directory.iterdir():
                 if entry.is_dir() and not entry.is_symlink():
-                    self._walk(entry, remaining_depth - 1, results)
+                    self._walk(
+                        entry,
+                        remaining_depth - 1,
+                        results,
+                        last_scan,
+                        on_progress,
+                        dirs_scanned,
+                    )
         except PermissionError:
             pass

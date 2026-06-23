@@ -59,8 +59,11 @@ def create(
         if tool:
             adapters = [a for a in adapters if tool in a.name]
         # Prefer adapters that support create() over detection-only ones
-        createable = [a for a in adapters
-                      if a.name.split(".")[-1] in ("venv", "virtualenv")]
+        createable = [
+            a
+            for a in adapters
+            if a.name.split(".")[-1] in ("venv", "virtualenv")
+        ]
         if createable:
             adapters = createable
         if not adapters:
@@ -476,6 +479,11 @@ def import_spec(
 
         registry = AdapterRegistry(conn)
         adapters = registry.get_for_language(lang)
+        tool = spec.get("tool", "")
+        if tool:
+            matched = [a for a in adapters if tool in a.name]
+            if matched:
+                adapters = matched
         if not adapters:
             typer.echo(f"no adapter for {lang}")
             raise typer.Exit(1)

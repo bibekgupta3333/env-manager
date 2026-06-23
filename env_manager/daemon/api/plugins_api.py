@@ -23,9 +23,7 @@ async def enable_plugin(name: str):
     registry = AdapterRegistry(conn)
     if registry.enable(name):
         return {"status": "enabled", "name": name}
-    raise HTTPException(
-        status_code=404, detail="Adapter not found"
-    )
+    raise HTTPException(status_code=404, detail="Adapter not found")
 
 
 @router.post("/{name}/disable")
@@ -34,6 +32,4 @@ async def disable_plugin(name: str):
     registry = AdapterRegistry(conn)
     if registry.disable(name):
         return {"status": "disabled", "name": name}
-    raise HTTPException(
-        status_code=404, detail="Adapter not found"
-    )
+    raise HTTPException(status_code=404, detail="Adapter not found")

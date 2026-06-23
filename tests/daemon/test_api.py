@@ -61,7 +61,8 @@ def seeded_client(tmp_path, monkeypatch):
     proj = tmp_path / "test-proj"
     proj.mkdir()
     subprocess.run(
-        [sys.executable, "-m", "venv", str(proj / ".venv")], capture_output=True
+        [sys.executable, "-m", "venv", str(proj / ".venv")],
+        capture_output=True,
     )
 
     from env_manager.adapters.registry import AdapterRegistry

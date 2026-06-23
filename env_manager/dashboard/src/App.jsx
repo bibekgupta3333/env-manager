@@ -1,11 +1,13 @@
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback, useEffect, useRef } from 'react';
 import Sidebar from './components/Sidebar';
 import Dashboard from './components/Dashboard';
 import EnvList from './components/EnvList';
 import DoctorView from './components/DoctorView';
 import CleanupView from './components/CleanupView';
 import SnapshotsView from './components/SnapshotsView';
+import { createToast } from './components/Toast';
 import { connectWS } from './api';
+import './App.css';
 
 const TABS = {
   dashboard: Dashboard,
@@ -18,18 +20,27 @@ const TABS = {
 export default function App() {
   const [activeTab, setActiveTab] = useState('dashboard');
   const [wsStatus, setWsStatus] = useState('connecting');
-  const [toast, setToast] = useState(null);
-
-  const showToast = useCallback((msg, dur = 3000) => {
-    setToast(msg);
-    setTimeout(() => setToast(null), dur);
-  }, []);
+  const [collapsed, setCollapsed] = useState(false);
+  const [tabSwitching, setTabSwitching] = useState(false);
+  const tabTimerRef = useRef(null);
 
   const onWsMessage = useCallback((data) => {
     if (data.event === 'scan') {
-      showToast('Scan complete — refreshing data');
+      createToast('Scan complete — refreshing data', 'success');
     }
-  }, [showToast]);
+  }, []);
+
+  const handleTabChange = useCallback((tab) => {
+    if (tab === activeTab) return;
+    setTabSwitching(true);
+    setActiveTab(tab);
+  }, [activeTab]);
+
+  useEffect(() => {
+    clearTimeout(tabTimerRef.current);
+    tabTimerRef.current = setTimeout(() => setTabSwitching(false), 350);
+    return () => clearTimeout(tabTimerRef.current);
+  }, [activeTab]);
 
   useEffect(() => {
     const ws = connectWS(onWsMessage);
@@ -42,11 +53,20 @@ export default function App() {
 
   return (
     <>
-      <Sidebar activeTab={activeTab} onTabChange={setActiveTab} wsStatus={wsStatus} />
-      <main className="main-content">
-        <TabComponent showToast={showToast} />
+      <Sidebar
+        activeTab={activeTab}
+        onTabChange={handleTabChange}
+        wsStatus={wsStatus}
+        collapsed={collapsed}
+        onToggle={() => setCollapsed(v => !v)}
+      />
+      <main className={`main-content${collapsed ? ' expanded' : ''}`}>
+        <div className="page-wrap">
+          <div key={activeTab} className={`page-enter${tabSwitching ? ' page-loading' : ''}`}>
+            <TabComponent />
+          </div>
+        </div>
       </main>
-      {toast && <div className="toast">{toast}</div>}
     </>
   );
 }

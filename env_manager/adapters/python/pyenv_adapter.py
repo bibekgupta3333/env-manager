@@ -47,9 +47,9 @@ class PythonPyenvAdapter(BaseAdapter):
                     version=version,
                     path=str(path),
                     size_bytes=self._du(path),
-                    interpreter_path=str(python_bin)
-                    if python_bin.exists()
-                    else "python3",
+                    interpreter_path=(
+                        str(python_bin) if python_bin.exists() else "python3"
+                    ),
                     env_type="global",
                 )
         except OSError:

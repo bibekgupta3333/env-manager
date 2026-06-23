@@ -114,8 +114,11 @@ class PythonVenvAdapter(BaseAdapter):
             )
             if r.returncode != 0:
                 errors.append(f"python --version failed: {r.stderr}")
-        except (subprocess.TimeoutExpired, subprocess.SubprocessError,
-                OSError) as e:
+        except (
+            subprocess.TimeoutExpired,
+            subprocess.SubprocessError,
+            OSError,
+        ) as e:
             checks.append({"name": "python_binary", "passed": False})
             errors.append(str(e))
 
@@ -129,8 +132,11 @@ class PythonVenvAdapter(BaseAdapter):
             checks.append({"name": "import_test", "passed": r.returncode == 0})
             if r.returncode != 0:
                 errors.append(f"Import test failed: {r.stderr}")
-        except (subprocess.TimeoutExpired, subprocess.SubprocessError,
-                OSError) as e:
+        except (
+            subprocess.TimeoutExpired,
+            subprocess.SubprocessError,
+            OSError,
+        ) as e:
             checks.append({"name": "import_test", "passed": False})
             errors.append(str(e))
 
@@ -188,6 +194,53 @@ class PythonVenvAdapter(BaseAdapter):
             subprocess.run(
                 [str(self._python_bin(path)), "-m", "pip", "install"]
                 + list(packages),
+                check=True,
+                capture_output=True,
+                text=True,
+                timeout=120,
+            )
+
+    def uninstall(self, path: Path, packages: list[str]) -> None:
+        pip_bin = str(self._python_bin(path).parent / "pip")
+        try:
+            subprocess.run(
+                [pip_bin, "uninstall", "-y"] + list(packages),
+                check=True,
+                capture_output=True,
+                text=True,
+                timeout=120,
+            )
+        except subprocess.CalledProcessError:
+            subprocess.run(
+                [str(self._python_bin(path)), "-m", "pip", "uninstall", "-y"]
+                + list(packages),
+                check=True,
+                capture_output=True,
+                text=True,
+                timeout=120,
+            )
+
+    def update(self, path: Path, packages: list[str] | None = None) -> None:
+        pip_bin = str(self._python_bin(path).parent / "pip")
+        targets = list(packages) if packages else []
+        try:
+            subprocess.run(
+                [pip_bin, "install", "--upgrade"] + targets,
+                check=True,
+                capture_output=True,
+                text=True,
+                timeout=120,
+            )
+        except subprocess.CalledProcessError:
+            cmd = [
+                str(self._python_bin(path)),
+                "-m",
+                "pip",
+                "install",
+                "--upgrade",
+            ]
+            subprocess.run(
+                cmd + targets,
                 check=True,
                 capture_output=True,
                 text=True,

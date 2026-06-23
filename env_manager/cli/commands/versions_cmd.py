@@ -28,7 +28,11 @@ def _show_python() -> None:
 
     pyenv = home / ".pyenv" / "versions"
     if pyenv.exists():
-        vers = [p.name for p in pyenv.iterdir() if p.is_dir() and not p.name.startswith(".")]
+        vers = [
+            p.name
+            for p in pyenv.iterdir()
+            if p.is_dir() and not p.name.startswith(".")
+        ]
         managers.append(("pyenv", vers))
 
     asdf_py = home / ".asdf" / "installs" / "python"

@@ -61,3 +61,9 @@ def test_plugins_list(runner):
 def test_config_show(runner):
     result = runner.invoke(app, ["config", "show"])
     assert result.exit_code == 0
+
+
+def test_daemon_help(runner):
+    result = runner.invoke(app, ["daemon", "--help"])
+    assert result.exit_code == 0
+    assert "Start" in result.stdout or "dashboard" in result.stdout

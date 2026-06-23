@@ -161,7 +161,7 @@ class TestRustupAdapter:
         proj = tmp_path / "rust-proj"
         proj.mkdir()
         (proj / "rust-toolchain.toml").write_text(
-            "[toolchain]\nchannel = \"stable\"\n"
+            '[toolchain]\nchannel = "stable"\n'
         )
         adapter = RustRustupAdapter()
         result = adapter.detect(proj)

@@ -33,9 +33,7 @@ class TestDoctor:
     def test_doctor_detects_broken_env(self, runner, tmp_path, monkeypatch):
         venv_path = tmp_path / "proj_broken" / ".venv"
         venv_path.parent.mkdir(parents=True, exist_ok=True)
-        subprocess.run(
-            ["python3", "-m", "venv", str(venv_path)], check=True
-        )
+        subprocess.run(["python3", "-m", "venv", str(venv_path)], check=True)
 
         from env_manager.cli.commands import scan as scan_mod
 
@@ -53,9 +51,7 @@ class TestDoctor:
     def test_doctor_detects_healthy_env(self, runner, tmp_path, monkeypatch):
         venv_path = tmp_path / "proj_healthy" / ".venv"
         venv_path.parent.mkdir(parents=True, exist_ok=True)
-        subprocess.run(
-            ["python3", "-m", "venv", str(venv_path)], check=True
-        )
+        subprocess.run(["python3", "-m", "venv", str(venv_path)], check=True)
 
         from env_manager.cli.commands import scan as scan_mod
 

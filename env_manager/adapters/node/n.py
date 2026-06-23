@@ -55,9 +55,7 @@ class NodeNAdapter(BaseAdapter):
         return []
 
     def freeze(self, path: Path) -> FreezeResult:
-        return FreezeResult(
-            raw_content="", format="package.json", packages=[]
-        )
+        return FreezeResult(raw_content="", format="package.json", packages=[])
 
     def check_health(self, path: Path) -> HealthResult:
         node = path / "bin" / "node"

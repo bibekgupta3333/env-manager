@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import shutil
 from pathlib import Path
 
 from env_manager.adapters.base import BaseAdapter
@@ -73,8 +74,6 @@ class RubyRvmAdapter(BaseAdapter):
         return FreezeResult(raw_content="", format="Gemfile", packages=[])
 
     def check_health(self, path: Path) -> HealthResult:
-        import shutil
-
         if shutil.which("ruby"):
             return HealthResult(status="healthy")
         return HealthResult(status="degraded")

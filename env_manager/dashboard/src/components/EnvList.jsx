@@ -1,34 +1,39 @@
 import { useState, useEffect, useMemo } from 'react';
 import { fetchEnvs } from '../api';
 import EnvDetail from './EnvDetail';
+import StatusBadge from './StatusBadge';
+import SizeBar from './SizeBar';
+import EmptyState from './EmptyState';
+import SearchInput from './SearchInput';
+import { createToast } from './Toast';
 
-function fmtSize(b) {
-  if (!b) return '0 B';
-  if (b >= 1e9) return (b / 1e9).toFixed(1) + ' GB';
-  if (b >= 1e6) return (b / 1e6).toFixed(1) + ' MB';
-  if (b >= 1e3) return (b / 1e3).toFixed(1) + ' KB';
-  return b + ' B';
-}
+const RefreshIcon = () => (
+  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <polyline points="23 4 23 10 17 10"/>
+    <polyline points="1 20 1 14 7 14"/>
+    <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/>
+  </svg>
+);
 
-function trunc(s, len) {
-  if (!s) return '-';
-  return s.length > len ? s.slice(0, len) + '...' : s;
-}
+const SearchIconSvg = () => (
+  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <circle cx="11" cy="11" r="8"/>
+    <line x1="21" y1="21" x2="16.65" y2="16.65"/>
+  </svg>
+);
 
-export default function EnvList({ showToast }) {
+export default function EnvList() {
   const [envs, setEnvs] = useState([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [langFilter, setLangFilter] = useState('');
-  const [sortKey, setSortKey] = useState('project_name');
-  const [sortDir, setSortDir] = useState('asc');
   const [selectedEnv, setSelectedEnv] = useState(null);
 
   const load = () => {
     setLoading(true);
     fetchEnvs()
       .then((data) => setEnvs(data.environments || []))
-      .catch(() => showToast?.('Failed to load environments'))
+      .catch(() => createToast('Failed to load environments', 'error'))
       .finally(() => setLoading(false));
   };
 
@@ -51,92 +56,102 @@ export default function EnvList({ showToast }) {
     if (langFilter) {
       list = list.filter((e) => e.language === langFilter);
     }
-    list.sort((a, b) => {
-      const va = a[sortKey] ?? '';
-      const vb = b[sortKey] ?? '';
-      const cmp = String(va).localeCompare(String(vb));
-      return sortDir === 'asc' ? cmp : -cmp;
-    });
     return list;
-  }, [envs, search, langFilter, sortKey, sortDir]);
-
-  const handleHeaderClick = (key) => {
-    if (sortKey === key) {
-      setSortDir((d) => (d === 'asc' ? 'desc' : 'asc'));
-    } else {
-      setSortKey(key);
-      setSortDir('asc');
-    }
-  };
+  }, [envs, search, langFilter]);
 
   return (
     <div>
-      <h2>Environments</h2>
       <div className="toolbar">
-        <input
-          type="text"
-          placeholder="Search..."
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-        />
+        <div style={{ width: '240px' }}>
+          <SearchInput
+            value={search}
+            onChange={setSearch}
+            placeholder="Search projects..."
+          />
+        </div>
         <select value={langFilter} onChange={(e) => setLangFilter(e.target.value)}>
           <option value="">All languages</option>
           {languages.map((l) => (
             <option key={l} value={l}>{l}</option>
           ))}
         </select>
-        <button onClick={load}>Refresh</button>
+        <button className="btn" onClick={load} title="Refresh">
+          <RefreshIcon />
+          Refresh
+        </button>
       </div>
 
       {loading ? (
-        <p className="loading">Loading...</p>
+        <div>
+          {[...Array(8)].map((_, i) => (
+            <div key={i} className="skeleton" style={{ height: '40px', marginBottom: '2px', borderRadius: 'var(--radius-sm)' }} />
+          ))}
+        </div>
       ) : filtered.length === 0 ? (
-        <p className="loading">No environments found. Run `envs scan` first.</p>
+        <EmptyState
+          icon={<SearchIconSvg />}
+          title="No environments found"
+          description="Run envs scan to discover environments in your projects."
+          action={envs.length === 0 ? undefined : { label: 'Clear filters', onClick: () => { setSearch(''); setLangFilter(''); } }}
+        />
       ) : (
-        <table>
-          <thead>
-            <tr>
-              <th onClick={() => handleHeaderClick('project_name')} style={{ cursor: 'pointer' }}>
-                Project {sortKey === 'project_name' ? (sortDir === 'asc' ? '^' : 'v') : ''}
-              </th>
-              <th onClick={() => handleHeaderClick('language')} style={{ cursor: 'pointer' }}>
-                Version {sortKey === 'language' ? (sortDir === 'asc' ? '^' : 'v') : ''}
-              </th>
-              <th>Tool</th>
-              <th onClick={() => handleHeaderClick('size_bytes')} style={{ cursor: 'pointer' }}>
-                Size {sortKey === 'size_bytes' ? (sortDir === 'asc' ? '^' : 'v') : ''}
-              </th>
-              <th>Health</th>
-              <th>Path</th>
-            </tr>
-          </thead>
-          <tbody>
-            {filtered.map((env) => (
-              <tr
-                key={env.id}
-                className="clickable"
-                onClick={() => setSelectedEnv(env)}
-              >
-                <td style={{ color: 'var(--accent)' }}>{env.project_name || '-'}</td>
-                <td>{env.language} {env.version || ''}</td>
-                <td>{env.tool || '-'}</td>
-                <td>{fmtSize(env.size_bytes)}</td>
-                <td>
-                  <span className={`badge ${env.last_health_result || 'unchecked'}`}>
-                    {env.last_health_result || 'unchecked'}
-                  </span>
-                </td>
-                <td style={{ color: 'var(--dim)', fontSize: '11px' }}>
-                  {trunc(env.path, 40)}
-                </td>
+        <div className="table-wrap">
+          <table>
+            <colgroup>
+              <col style={{ width: '20%' }} />
+              <col style={{ width: '12%' }} />
+              <col style={{ width: '10%' }} />
+              <col style={{ width: '12%' }} />
+              <col style={{ width: '10%' }} />
+              <col style={{ width: '36%' }} />
+            </colgroup>
+            <thead>
+              <tr>
+                <th>Project</th>
+                <th>Version</th>
+                <th>Tool</th>
+                <th>Size</th>
+                <th>Health</th>
+                <th>Path</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {filtered.map((env) => {
+                const status = env.last_health_result || 'unchecked';
+                return (
+                  <tr
+                    key={env.id}
+                    className="clickable"
+                    onClick={() => setSelectedEnv(env)}
+                  >
+                    <td style={{ fontWeight: 600, color: 'var(--gray-12)' }}>
+                      {env.project_name || '-'}
+                    </td>
+                    <td style={{ fontFamily: 'var(--font-mono)', fontSize: 'var(--text-xs)', color: 'var(--gray-10)' }}>
+                      {env.version || '-'}
+                    </td>
+                    <td style={{ fontSize: 'var(--text-xs)', color: 'var(--gray-10)', textTransform: 'capitalize' }}>
+                      {env.tool || '-'}
+                    </td>
+                    <td>
+                      <SizeBar bytes={env.size_bytes} />
+                    </td>
+                    <td>
+                      <StatusBadge status={status} size="sm" />
+                    </td>
+                    <td className="path-cell" title={env.path || ''}>
+                      {env.path || '-'}
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
       )}
 
       {selectedEnv && (
-        <EnvDetail env={selectedEnv} onClose={() => setSelectedEnv(null)} showToast={showToast} />
+        <EnvDetail env={selectedEnv} onClose={() => setSelectedEnv(null)} />
       )}
     </div>
   );

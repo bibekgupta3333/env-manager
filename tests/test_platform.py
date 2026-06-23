@@ -77,8 +77,15 @@ class TestVersionManagerPaths:
     def test_all_vms_present(self):
         paths = version_manager_paths()
         expected = [
-            "nvm", "fnm", "volta", "pyenv", "rbenv",
-            "rvm", "conda", "rustup", "goenv",
+            "nvm",
+            "fnm",
+            "volta",
+            "pyenv",
+            "rbenv",
+            "rvm",
+            "conda",
+            "rustup",
+            "goenv",
         ]
         for vm in expected:
             assert vm in paths, f"{vm} missing from version_manager_paths"

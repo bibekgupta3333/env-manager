@@ -55,6 +55,9 @@ envs = "env_manager.cli.main:app"
 target-version = "py310"
 line-length = 79
 
+[tool.black]
+line-length = 79
+
 [tool.ruff.lint]
 select = ["E", "F", "I", "N", "W", "UP", "B", "C4", "SIM"]
 ignore = ["B008", "B904"]
@@ -79,7 +82,7 @@ module = ["apscheduler.*", "apscheduler.schedulers.background"]
 ignore_missing_imports = true
 
 [[tool.mypy.overrides]]
-module = ["env_manager.daemon.*", "env_manager.daemon.api.*", "env_manager.cli.commands.lifecycle", "env_manager.cli.commands.snapshots_cmd", "env_manager.cli.commands.cleanup_cmd", "env_manager.cli.commands.doctor_cmd", "env_manager.cli.commands.hook_cmd", "env_manager.cli.commands.db_cmd", "env_manager.cli.resolve"]
+module = ["env_manager.daemon.*", "env_manager.daemon.api.*", "env_manager.cli.commands.lifecycle", "env_manager.cli.commands.snapshots_cmd", "env_manager.cli.commands.cleanup_cmd", "env_manager.cli.commands.doctor_cmd", "env_manager.cli.commands.hook_cmd", "env_manager.cli.commands.db_cmd", "env_manager.cli.commands.scan", "env_manager.cli.resolve"]
 disable_error_code = ["no-untyped-def", "attr-defined", "no-untyped-call"]
 
 [tool.pytest.ini_options]

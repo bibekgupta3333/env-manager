@@ -2,10 +2,12 @@
 
 from __future__ import annotations
 
+import shutil
 from pathlib import Path
 from typing import Any
 
 import typer
+import typer.core
 
 from env_manager.adapters.registry import AdapterRegistry
 from env_manager.cli.db_utils import ensure_db_dir, get_db_path
@@ -25,6 +27,7 @@ app = typer.Typer(help="Clean up stale and orphaned environments")
 
 @app.callback(invoke_without_command=True)
 def cleanup(
+    ctx: typer.Context,
     stale_days: int = typer.Option(
         60, "--stale", "-s", help="Days since last use to consider stale"
     ),
@@ -44,6 +47,12 @@ def cleanup(
     db_path = get_db_path()
     init_db(db_path)
     conn = get_connection(db_path)
+
+    # If a subcommand (gc, compare) was invoked, skip the guard
+    if ctx.invoked_subcommand is not None:
+        conn.close()
+        close_connection(db_path)
+        return
 
     if not dry_run and not confirm:
         typer.echo("Use --confirm to execute, or --dry-run to preview")
@@ -93,10 +102,7 @@ def cleanup(
                 )
                 name = proj["name"] if proj else env["path"]
                 size_bytes = env.get("size_bytes", 0) or 0
-                typer.echo(
-                    f"  {action}: {name} "
-                    f"({_fmt_size(size_bytes)})"
-                )
+                typer.echo(f"  {action}: {name} " f"({_fmt_size(size_bytes)})")
             typer.echo(f"Would free: {_fmt_size(total_size)}")
             return
 
@@ -137,7 +143,6 @@ def cleanup(
             # Remove directory
             env_path = Path(env["path"])
             if env_path.exists():
-                import shutil
 
                 shutil.rmtree(env_path, ignore_errors=True)
 

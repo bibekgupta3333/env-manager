@@ -1,88 +1,154 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { fetchEnvs } from '../api';
+import StatusBadge from './StatusBadge';
+import { createToast } from './Toast';
 
-export default function DoctorView({ showToast }) {
+const HeartIcon = () => (
+  <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/>
+  </svg>
+);
+
+export default function DoctorView() {
   const [results, setResults] = useState(null);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [hasRun, setHasRun] = useState(false);
 
   const runDoctor = async () => {
     setLoading(true);
+    setHasRun(true);
     try {
       const data = await fetchEnvs();
-      setResults(data.environments || []);
+      const envs = data.environments || [];
+      await new Promise((r) => setTimeout(r, 600 + Math.random() * 400));
+      setResults(envs);
     } catch {
-      showToast?.('Doctor check failed');
+      createToast('Doctor check failed', 'error');
     } finally {
       setLoading(false);
     }
   };
 
+  useEffect(() => {
+    runDoctor();
+  }, []);
   const healthy = results ? results.filter((e) => e.last_health_result === 'healthy').length : 0;
   const broken = results ? results.filter((e) => e.last_health_result === 'broken').length : 0;
-  const unknown = results ? results.length - healthy - broken : 0;
+  const degraded = results ? results.filter((e) => e.last_health_result === 'degraded').length : 0;
+  const unchecked = results ? results.filter((e) => !e.last_health_result || e.last_health_result === 'unchecked').length : 0;
 
   return (
     <div>
-      <h2>Doctor</h2>
-      <div className="toolbar">
-        <button className="primary" onClick={runDoctor} disabled={loading}>
-          {loading ? 'Running...' : 'Run Doctor (All)'}
+      <div className="doctor-hero">
+        <div className="doctor-hero-icon">
+          <HeartIcon />
+        </div>
+        <h2>Health Check</h2>
+        <p>
+          Run a health check across all environments to detect broken dependencies, missing packages, and configuration issues.
+        </p>
+        <button
+          className="btn btn-primary"
+          onClick={runDoctor}
+          disabled={loading}
+          style={{ padding: '10px 28px', fontSize: 'var(--text-base)', marginTop: 'var(--space-2)' }}
+        >
+          {loading ? (
+            <>
+              <span style={{
+                display: 'inline-block',
+                width: '14px',
+                height: '14px',
+                border: '2px solid rgba(255,255,255,0.3)',
+                borderTopColor: '#fff',
+                borderRadius: '50%',
+                animation: 'spin 0.6s linear infinite',
+                marginRight: 'var(--space-2)',
+              }} />
+              {results ? `Checking ${results.length} environments...` : 'Checking environments...'}
+            </>
+          ) : (
+            <>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ marginRight: 'var(--space-2)' }}>
+                <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/>
+                <polyline points="22 4 12 14.01 9 11.01"/>
+              </svg>
+              Run Health Check
+            </>
+          )}
         </button>
+        {loading && (
+          <div className="progress-bar" style={{ marginTop: 'var(--space-3)' }}>
+            <div className="progress-bar-fill" />
+          </div>
+        )}
       </div>
 
-      {loading && <p className="loading">Running health checks...</p>}
-
-      {results && (
+      {hasRun && results && (
         <>
-          <div className="summary">
-            <div className="card">
-              <div className="num" style={{ color: 'var(--green)' }}>{healthy}</div>
-              <div className="label">Healthy</div>
+          <div className="doctor-summary">
+            <div className="doctor-summary-item">
+              <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: 'var(--green-9)' }} />
+              <span className="doctor-summary-count">{healthy}</span>
+              <span>healthy</span>
             </div>
-            <div className="card">
-              <div className="num" style={{ color: 'var(--red)' }}>{broken}</div>
-              <div className="label">Broken</div>
+            <div className="doctor-summary-item">
+              <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: 'var(--amber-9)' }} />
+              <span className="doctor-summary-count">{degraded}</span>
+              <span>degraded</span>
             </div>
-            <div className="card">
-              <div className="num" style={{ color: 'var(--dim)' }}>{unknown}</div>
-              <div className="label">Unknown</div>
+            <div className="doctor-summary-item">
+              <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: 'var(--red-9)' }} />
+              <span className="doctor-summary-count">{broken}</span>
+              <span>broken</span>
+            </div>
+            <div className="doctor-summary-item">
+              <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: 'var(--gray-8)' }} />
+              <span className="doctor-summary-count">{unchecked}</span>
+              <span>unchecked</span>
             </div>
           </div>
 
-          {results.length === 0 ? (
-            <p className="loading">No environments to check.</p>
-          ) : (
-            <table>
-              <thead>
-                <tr>
-                  <th>Project</th>
-                  <th>Version</th>
-                  <th>Status</th>
-                </tr>
-              </thead>
-              <tbody>
-                {results.map((env) => {
-                  const status = env.last_health_result || 'unchecked';
-                  return (
-                    <tr key={env.id}>
-                      <td>{env.project_name || env.path}</td>
-                      <td>{env.language} {env.version}</td>
-                      <td>
-                        <span className={`badge ${status}`}>
-                          {status === 'healthy' ? 'OK' : status === 'broken' ? 'BROKEN' : '-'}
-                        </span>
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          )}
+          <div className="doctor-results">
+            {results.map((env) => {
+              const status = env.last_health_result || 'unchecked';
+              return (
+                <div key={env.id} className="doctor-card">
+                  <div className="doctor-card-top">
+                    <div className="doctor-card-name">
+                      {env.project_name || env.path}
+                    </div>
+                    <StatusBadge status={status} size="sm" />
+                  </div>
+                  <div className="doctor-card-detail">
+                    <span>{env.language} {env.version || ''}</span>
+                  </div>
+                  {status === 'broken' && env.last_health_error && (
+                    <div className="doctor-card-error">
+                      {env.last_health_error}
+                    </div>
+                  )}
+                  {status === 'broken' && !env.last_health_error && (
+                    <div className="doctor-card-suggestion">
+                      Run <code style={{ background: 'var(--green-3)', padding: '1px 4px', borderRadius: '2px' }}>envs doctor --fix</code> to attempt repair
+                    </div>
+                  )}
+                  {status === 'healthy' && (
+                    <div className="doctor-card-suggestion">
+                      All checks passed
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
         </>
       )}
 
-      {!loading && !results && (
-        <p className="loading">Click "Run Doctor" to check health of all environments.</p>
+      {!loading && !hasRun && !results && (
+        <p style={{ color: 'var(--gray-9)', textAlign: 'center', padding: 'var(--space-12) 0', fontSize: 'var(--text-sm)' }}>
+          Click "Run Health Check" to check health of all environments.
+        </p>
       )}
     </div>
   );

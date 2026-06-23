@@ -61,9 +61,7 @@ class TestUvAdapter:
         proj = tmp_path / "uv-proj"
         proj.mkdir()
         toml_text = (
-            "[project]\n"
-            "requires-python = '>=3.10'\n"
-            "# uv lock file\n"
+            "[project]\n" "requires-python = '>=3.10'\n" "# uv lock file\n"
         )
         (proj / "pyproject.toml").write_text(toml_text)
         adapter = PythonUvAdapter()

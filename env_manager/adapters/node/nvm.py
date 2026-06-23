@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import shutil
 import subprocess
 from pathlib import Path
 from typing import Any
@@ -42,9 +43,7 @@ class NodeNvmAdapter(BaseAdapter):
                     version=version,
                     path=str(path),
                     size_bytes=self._du(nvm_path),
-                    interpreter_path=str(
-                        nvm_path / node_exe_name()
-                    ),
+                    interpreter_path=str(nvm_path / node_exe_name()),
                     env_type="global",
                 )
             return EnvMetadata(
@@ -52,9 +51,9 @@ class NodeNvmAdapter(BaseAdapter):
                 tool="nvm",
                 version=version,
                 path=str(path),
-                size_bytes=self._du(node_modules)
-                if node_modules.exists()
-                else 0,
+                size_bytes=(
+                    self._du(node_modules) if node_modules.exists() else 0
+                ),
                 interpreter_path="node",
                 env_type="global",
             )
@@ -123,8 +122,12 @@ class NodeNvmAdapter(BaseAdapter):
                     Package(name=k, version=v.get("version", "unknown"))
                     for k, v in deps.items()
                 ]
-        except (subprocess.TimeoutExpired, subprocess.SubprocessError,
-                json.JSONDecodeError, OSError):
+        except (
+            subprocess.TimeoutExpired,
+            subprocess.SubprocessError,
+            json.JSONDecodeError,
+            OSError,
+        ):
             pass
         return []
 
@@ -154,8 +157,12 @@ class NodeNvmAdapter(BaseAdapter):
                 timeout=10,
             )
             checks.append({"name": "node_binary", "passed": r.returncode == 0})
-        except (subprocess.TimeoutExpired, subprocess.SubprocessError,
-                OSError, ValueError) as e:
+        except (
+            subprocess.TimeoutExpired,
+            subprocess.SubprocessError,
+            OSError,
+            ValueError,
+        ) as e:
             errors.append(str(e))
 
         status = "healthy" if len(errors) == 0 else "broken"
@@ -170,8 +177,12 @@ class NodeNvmAdapter(BaseAdapter):
                 timeout=10,
             )
             return r.stdout.strip().lstrip("v")
-        except (subprocess.TimeoutExpired, subprocess.SubprocessError,
-                FileNotFoundError, OSError):
+        except (
+            subprocess.TimeoutExpired,
+            subprocess.SubprocessError,
+            FileNotFoundError,
+            OSError,
+        ):
             return "unknown"
 
     def _find_node(self, path: Path) -> str:
@@ -179,8 +190,6 @@ class NodeNvmAdapter(BaseAdapter):
         if node_path.exists():
             return str(node_path)
         # Fallback: try system node via PATH
-        import shutil
-
         system_node = shutil.which("node")
         if system_node:
             return system_node

@@ -3,13 +3,12 @@
 import importlib
 import pkgutil
 
+import env_manager.adapters as pkg
 from env_manager.adapters.base import BaseAdapter
 
 
 def discover_builtin_adapters() -> list[type[BaseAdapter]]:
-    """Load all adapters from env_manager.adapters.* packages."""
     adapters: list[type[BaseAdapter]] = []
-    import env_manager.adapters as pkg
 
     for _, name, is_pkg in pkgutil.iter_modules(pkg.__path__):
         if not is_pkg or name in ("base", "loader", "registry"):

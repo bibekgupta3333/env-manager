@@ -51,9 +51,9 @@ class PythonUvAdapter(BaseAdapter):
             tool="uv",
             version=version,
             path=str(venv_dir if venv_dir.exists() else path),
-            size_bytes=self._du(venv_dir)
-            if venv_dir.exists()
-            else self._du(path),
+            size_bytes=(
+                self._du(venv_dir) if venv_dir.exists() else self._du(path)
+            ),
             interpreter_path="python3",
         )
 
@@ -62,9 +62,9 @@ class PythonUvAdapter(BaseAdapter):
         return EnvMetadata(
             language="python",
             tool="uv",
-            version=self._read_venv_version(venv)
-            if venv.exists()
-            else "unknown",
+            version=(
+                self._read_venv_version(venv) if venv.exists() else "unknown"
+            ),
             path=str(venv if venv.exists() else path),
             size_bytes=self._du(venv) if venv.exists() else self._du(path),
             interpreter_path="python3",

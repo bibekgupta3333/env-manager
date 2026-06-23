@@ -170,9 +170,7 @@ class EnvironmentRepository:
         )
         self.conn.commit()
 
-    def update_metadata(
-        self, env_id: int, metadata: dict[str, Any]
-    ) -> None:
+    def update_metadata(self, env_id: int, metadata: dict[str, Any]) -> None:
         self.conn.execute(
             "UPDATE environments SET metadata = ? WHERE id = ?",
             (json.dumps(metadata), env_id),

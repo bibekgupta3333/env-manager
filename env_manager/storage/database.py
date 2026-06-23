@@ -46,13 +46,19 @@ def check_disk_space(db_path: str, min_bytes: int = 10_000_000) -> bool:
 def get_connection(db_path: str) -> sqlite3.Connection:
     """Get or create a connection for the given DB path. Thread-safe."""
     with _lock:
-        if db_path not in _connections:
-            conn = sqlite3.connect(db_path)
-            conn.row_factory = sqlite3.Row
-            conn.execute("PRAGMA journal_mode=WAL")
-            conn.execute("PRAGMA foreign_keys=ON")
-            _connections[db_path] = conn
-        return _connections[db_path]
+        existing = _connections.get(db_path)
+        if existing is not None:
+            try:
+                existing.execute("SELECT 1")
+                return existing
+            except sqlite3.ProgrammingError:
+                del _connections[db_path]
+        conn = sqlite3.connect(db_path)
+        conn.row_factory = sqlite3.Row
+        conn.execute("PRAGMA journal_mode=WAL")
+        conn.execute("PRAGMA foreign_keys=ON")
+        _connections[db_path] = conn
+        return conn
 
 
 def close_connection(db_path: str) -> None:

@@ -3,6 +3,7 @@
 from pathlib import Path
 
 import typer
+from rich.progress import Progress, SpinnerColumn, TextColumn
 
 from env_manager.adapters.registry import AdapterRegistry
 from env_manager.cli.db_utils import ensure_db_dir, get_db_path
@@ -51,14 +52,38 @@ def scan(
 
         for p in scan_paths:
             resolved = str(Path(p).expanduser())
-            if incremental:
-                typer.echo(f"Incremental scan of {resolved}...")
-            else:
-                typer.echo(f"Scanning {resolved}...")
-            results = scanner.scan(
-                resolved, depth=depth, incremental=incremental
-            )
-            typer.echo(f"  Found {len(results)} environments")
+            prefix = "Incremental scan" if incremental else "Scanning"
+            label = f"{prefix} {resolved}"
+
+            with Progress(
+                SpinnerColumn(),
+                TextColumn("[progress.description]{task.description}"),
+                transient=True,
+            ) as progress:
+                t = progress.add_task(label, total=None)
+
+                def make_callback(task_id, lbl):
+                    def cb(dirs: int, found: int) -> None:
+                        progress.update(
+                            task_id,
+                            description=f"{lbl} — {dirs} dirs, {found} envs",
+                        )
+
+                    return cb
+
+                results = scanner.scan(
+                    resolved,
+                    depth=depth,
+                    incremental=incremental,
+                    on_progress=make_callback(t, label),
+                )
+
+                progress.update(
+                    t,
+                    description=(f"{label} — done, {len(results)} envs found"),
+                    completed=True,
+                )
+
     finally:
         conn.close()
         close_connection(db_path)

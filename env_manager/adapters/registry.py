@@ -45,8 +45,12 @@ class AdapterRegistry:
                     """INSERT OR IGNORE INTO adapter_registry
                        (name, display_name, version, env_type, source)
                        VALUES (?, ?, ?, ?, 'builtin')""",
-                    (inst.name, inst.display_name,
-                     inst.version, inst.env_type),
+                    (
+                        inst.name,
+                        inst.display_name,
+                        inst.version,
+                        inst.env_type,
+                    ),
                 )
                 self.conn.commit()
                 self._adapters[name] = cls()

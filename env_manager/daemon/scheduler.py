@@ -2,8 +2,13 @@
 
 import logging
 import threading
+from pathlib import Path
 
 from apscheduler.schedulers.background import BackgroundScheduler
+
+from env_manager.adapters.registry import AdapterRegistry
+from env_manager.discovery.scanner import Scanner
+from env_manager.storage.database import get_connection
 
 logger = logging.getLogger(__name__)
 
@@ -37,12 +42,6 @@ def stop_scheduler() -> None:
 def _run_periodic_scan(db_path: str) -> None:
     """Run a periodic scan in the background."""
     try:
-        from pathlib import Path
-
-        from env_manager.adapters.registry import AdapterRegistry
-        from env_manager.discovery.scanner import Scanner
-        from env_manager.storage.database import get_connection
-
         conn = get_connection(db_path)
         registry = AdapterRegistry(conn)
         adapters = registry.get_all_enabled()

@@ -44,7 +44,9 @@ class AsdfAdapter(BaseAdapter):
 
         return None
 
-    def _detect_tool_versions(self, tv: Path, proj_path: Path) -> EnvMetadata | None:
+    def _detect_tool_versions(
+        self, tv: Path, proj_path: Path
+    ) -> EnvMetadata | None:
         try:
             for line in tv.read_text().splitlines():
                 line = line.strip()
@@ -67,7 +69,9 @@ class AsdfAdapter(BaseAdapter):
             pass
         return None
 
-    def _detect_installed_runtime(self, path: Path, installs: Path) -> EnvMetadata | None:
+    def _detect_installed_runtime(
+        self, path: Path, installs: Path
+    ) -> EnvMetadata | None:
         rel = path.relative_to(installs)
         parts = rel.parts
         if len(parts) >= 2:
@@ -85,16 +89,22 @@ class AsdfAdapter(BaseAdapter):
 
     def inspect(self, path: Path) -> EnvMetadata:
         return EnvMetadata(
-            language="unknown", tool="asdf", version="unknown",
-            path=str(path), size_bytes=self._du(path),
-            interpreter_path="", env_type="global",
+            language="unknown",
+            tool="asdf",
+            version="unknown",
+            path=str(path),
+            size_bytes=self._du(path),
+            interpreter_path="",
+            env_type="global",
         )
 
     def get_packages(self, path: Path) -> list[Package]:
         return []
 
     def freeze(self, path: Path) -> FreezeResult:
-        return FreezeResult(raw_content="", format=".tool-versions", packages=[])
+        return FreezeResult(
+            raw_content="", format=".tool-versions", packages=[]
+        )
 
     def check_health(self, path: Path) -> HealthResult:
         return HealthResult(status="healthy")

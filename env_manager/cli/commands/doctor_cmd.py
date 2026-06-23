@@ -30,9 +30,6 @@ def doctor(
     fix: bool = typer.Option(
         False, "--fix", help="Attempt to auto-repair broken environments"
     ),
-    dry_run: bool = typer.Option(
-        False, "--dry-run", help="Show what would be checked/fixed"
-    ),
 ) -> None:
     """Check environment health. Detects broken, degraded, and healthy envs."""
     ensure_db_dir()

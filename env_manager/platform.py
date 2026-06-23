@@ -185,9 +185,7 @@ def version_manager_paths() -> dict[str, list[str]]:
     if linuxbrew:
         for key in paths:
             paths[key].append(
-                paths[key][0].replace(home, linuxbrew)
-                if paths[key]
-                else ""
+                paths[key][0].replace(home, linuxbrew) if paths[key] else ""
             )
     return paths
 

@@ -31,8 +31,11 @@ def created_env(runner, tmp_path):
     result = runner.invoke(
         app,
         [
-            "lifecycle", "create", f"python@{version}",
-            str(proj_dir), "--confirm",
+            "lifecycle",
+            "create",
+            f"python@{version}",
+            str(proj_dir),
+            "--confirm",
         ],
     )
     assert result.exit_code == 0, f"create failed: {result.output}"
@@ -46,8 +49,11 @@ def test_create_confirm(runner, tmp_path):
     result = runner.invoke(
         app,
         [
-            "lifecycle", "create", f"python@{version}",
-            str(proj_dir), "--confirm",
+            "lifecycle",
+            "create",
+            f"python@{version}",
+            str(proj_dir),
+            "--confirm",
         ],
     )
     assert result.exit_code == 0
@@ -62,8 +68,11 @@ def test_create_dry_run(runner, tmp_path):
     result = runner.invoke(
         app,
         [
-            "lifecycle", "create", f"python@{version}",
-            str(proj_dir), "--dry-run",
+            "lifecycle",
+            "create",
+            f"python@{version}",
+            str(proj_dir),
+            "--dry-run",
         ],
     )
     assert result.exit_code == 0
@@ -123,11 +132,16 @@ def test_remove_snapshot(runner, created_env):
     result = runner.invoke(
         app,
         [
-            "lifecycle", "remove", str(created_env),
-            "--snapshot", "--confirm",
+            "lifecycle",
+            "remove",
+            str(created_env),
+            "--snapshot",
+            "--confirm",
         ],
     )
-    assert result.exit_code == 0, f"stdout={result.stdout} stderr={result.stderr}"
+    assert (
+        result.exit_code == 0
+    ), f"stdout={result.stdout} stderr={result.stderr}"
     assert "Removed:" in result.stdout
     assert not venv_dir.exists()
 
@@ -141,8 +155,11 @@ def test_restore(runner, created_env):
     remove_result = runner.invoke(
         app,
         [
-            "lifecycle", "remove", str(created_env),
-            "--snapshot", "--confirm",
+            "lifecycle",
+            "remove",
+            str(created_env),
+            "--snapshot",
+            "--confirm",
         ],
     )
     assert remove_result.exit_code == 0
@@ -153,6 +170,8 @@ def test_restore(runner, created_env):
         app,
         ["lifecycle", "restore", str(created_env), "--confirm"],
     )
-    assert result.exit_code == 0, f"stdout={result.stdout} stderr={result.stderr}"
+    assert (
+        result.exit_code == 0
+    ), f"stdout={result.stdout} stderr={result.stderr}"
     assert "Restored:" in result.stdout
     assert venv_dir.exists()

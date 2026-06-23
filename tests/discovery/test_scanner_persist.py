@@ -17,26 +17,31 @@ class FakePersistAdapter(BaseAdapter):
     def detect(self, path):
         if (path / ".test-env").exists():
             return EnvMetadata(
-                language="test", tool="persist", version="1.0",
-                path=str(path), size_bytes=42_000,
+                language="test",
+                tool="persist",
+                version="1.0",
+                path=str(path),
+                size_bytes=42_000,
                 interpreter_path="/bin/test",
             )
         return None
 
     def inspect(self, path):
         return EnvMetadata(
-            language="test", tool="persist", version="1.0",
-            path=str(path), size_bytes=42_000,
-            interpreter_path="/bin/test", packages_count=0,
+            language="test",
+            tool="persist",
+            version="1.0",
+            path=str(path),
+            size_bytes=42_000,
+            interpreter_path="/bin/test",
+            packages_count=0,
         )
 
     def get_packages(self, path):
         return []
 
     def freeze(self, path):
-        return FreezeResult(
-            raw_content="", format="test.lock", packages=[]
-        )
+        return FreezeResult(raw_content="", format="test.lock", packages=[])
 
     def check_health(self, path):
         return HealthResult(status="healthy")
@@ -81,6 +86,7 @@ def test_scanner_duplicate_doesnt_create(tmp_path, db_connection):
     scanner.scan(str(tmp_path), depth=3)
 
     from env_manager.storage.repo_env import EnvironmentRepository
+
     env_repo = EnvironmentRepository(db_connection)
     all_envs = env_repo.list_all()
     assert len(all_envs) == 1  # No duplicates
