@@ -119,7 +119,12 @@ class TestDashboard:
     def test_dashboard_serves(self, client):
         resp = client.get("/")
         assert resp.status_code == 200
-        assert "env-manager" in resp.text.lower()
+        from env_manager.daemon.server import DASHBOARD_DIR
+        if DASHBOARD_DIR.exists():
+            assert "env-manager" in resp.text.lower()
+        else:
+            data = resp.json()
+            assert data.get("message") == "Dashboard not available"
 
 
 class TestNotFound:
