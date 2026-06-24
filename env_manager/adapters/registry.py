@@ -6,7 +6,10 @@ import sqlite3
 from typing import Any
 
 from env_manager.adapters.base import BaseAdapter
-from env_manager.adapters.loader import discover_builtin_adapters, discover_pip_adapters
+from env_manager.adapters.loader import (
+    discover_builtin_adapters,
+    discover_pip_adapters,
+)
 
 
 class AdapterRegistry:
@@ -19,16 +22,37 @@ class AdapterRegistry:
         rows = self.conn.execute("SELECT * FROM adapter_registry").fetchall()
         if not rows:
             self._seed_builtins()
-            rows = self.conn.execute("SELECT * FROM adapter_registry").fetchall()
+            rows = self.conn.execute(
+                "SELECT * FROM adapter_registry"
+            ).fetchall()
 
-        adapter_classes = {}
+        adapter_instances = {}
         for cls in discover_builtin_adapters() + discover_pip_adapters():
             inst = cls()
-            adapter_classes[inst.name] = cls
+            adapter_instances[inst.name] = inst
 
+        # Load enabled adapters from DB
+        db_names = {r["name"] for r in rows}
         for row in rows:
-            if row["enabled"] and row["name"] in adapter_classes:
-                self._adapters[row["name"]] = adapter_classes[row["name"]]()
+            if row["enabled"] and row["name"] in adapter_instances:
+                self._adapters[row["name"]] = adapter_instances[row["name"]]
+
+        # Seed any newly discovered adapters not yet in DB
+        for name, inst in adapter_instances.items():
+            if name not in db_names:
+                self.conn.execute(
+                    """INSERT OR IGNORE INTO adapter_registry
+                       (name, display_name, version, env_type, source)
+                       VALUES (?, ?, ?, ?, 'builtin')""",
+                    (
+                        inst.name,
+                        inst.display_name,
+                        inst.version,
+                        inst.env_type,
+                    ),
+                )
+                self.conn.commit()
+                self._adapters[name] = inst
 
     def _seed_builtins(self) -> None:
         for cls in discover_builtin_adapters():
@@ -45,7 +69,11 @@ class AdapterRegistry:
         return self._adapters.get(name)
 
     def get_for_language(self, language: str) -> list[BaseAdapter]:
-        return [a for a in self._adapters.values() if a.name.startswith(language)]
+        return [
+            a
+            for a in self._adapters.values()
+            if a.name.split(".")[0] == language
+        ]
 
     def get_all_enabled(self) -> list[BaseAdapter]:
         return list(self._adapters.values())
@@ -55,7 +83,8 @@ class AdapterRegistry:
             inst = cls()
             if inst.name == name:
                 self.conn.execute(
-                    "UPDATE adapter_registry SET enabled = 1 WHERE name = ?", (name,)
+                    "UPDATE adapter_registry SET enabled = 1 WHERE name = ?",
+                    (name,),
                 )
                 self.conn.commit()
                 self._adapters[name] = cls()
@@ -74,6 +103,8 @@ class AdapterRegistry:
 
     def list_all(self) -> list[dict[str, Any]]:
         rows = self.conn.execute(
-            "SELECT * FROM adapter_registry ORDER BY name"
+            "SELECT name, display_name, version, env_type, source, "
+            "source_path, enabled, installed_at "
+            "FROM adapter_registry ORDER BY name"
         ).fetchall()
         return [dict(r) for r in rows]

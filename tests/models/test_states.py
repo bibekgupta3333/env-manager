@@ -1,6 +1,11 @@
 """Tests for state enums and data models."""
 
-from env_manager.models.env import EnvMetadata, FreezeResult, HealthResult, Package
+from env_manager.models.env import (
+    EnvMetadata,
+    FreezeResult,
+    HealthResult,
+    Package,
+)
 from env_manager.models.project import Project
 from env_manager.models.states import DiscoveryStatus, ManagementState
 
@@ -49,24 +54,30 @@ class TestEnvMetadata:
         assert meta.language == "python"
         assert meta.tool == "venv"
         assert meta.size_bytes == 245_000_000
-        assert meta.env_type == "local"
+        assert meta.env_type == "project"
 
     def test_default_env_type(self):
         meta = EnvMetadata(
-            language="python", tool="venv", version="3.9",
-            path="/tmp/.venv", size_bytes=0, interpreter_path="/bin/python",
+            language="python",
+            tool="venv",
+            version="3.9",
+            path="/tmp/.venv",
+            size_bytes=0,
+            interpreter_path="/bin/python",
         )
-        assert meta.env_type == "local"
+        assert meta.env_type == "project"
 
-    def test_global_env_type(self):
+    def test_runtime_env_type(self):
         meta = EnvMetadata(
-            language="node", tool="nvm", version="20.10.0",
+            language="node",
+            tool="nvm",
+            version="20.10.0",
             path="/home/user/.nvm/versions/node/v20.10.0",
             size_bytes=150_000_000,
             interpreter_path="/home/user/.nvm/versions/node/v20.10.0/bin/node",
-            env_type="global",
+            env_type="runtime",
         )
-        assert meta.env_type == "global"
+        assert meta.env_type == "runtime"
 
 
 class TestPackage:

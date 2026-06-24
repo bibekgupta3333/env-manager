@@ -14,10 +14,10 @@ CREATE TABLE IF NOT EXISTS projects (
 
 CREATE TABLE IF NOT EXISTS environments (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
-    project_id INTEGER REFERENCES projects(id) ON DELETE SET NULL,
+    project_id INTEGER REFERENCES projects(id) ON DELETE CASCADE,
     adapter TEXT NOT NULL,
     env_type TEXT NOT NULL,
-    path TEXT NOT NULL,
+    path TEXT NOT NULL UNIQUE,
     language TEXT NOT NULL,
     version TEXT,
     tool TEXT,
@@ -75,6 +75,7 @@ CREATE TABLE IF NOT EXISTS activity_log (
 );
 CREATE INDEX IF NOT EXISTS idx_activity_env ON activity_log(env_id);
 CREATE INDEX IF NOT EXISTS idx_activity_ts ON activity_log(timestamp);
+CREATE INDEX IF NOT EXISTS idx_activity_event ON activity_log(event);
 
 CREATE TABLE IF NOT EXISTS scan_history (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -93,6 +94,11 @@ CREATE TABLE IF NOT EXISTS cleanup_rules (
     action TEXT NOT NULL,
     enabled INTEGER DEFAULT 1,
     created_at TEXT NOT NULL DEFAULT (datetime('now'))
+);
+
+CREATE TABLE IF NOT EXISTS _schema_version (
+    version INTEGER PRIMARY KEY,
+    applied_at TEXT NOT NULL DEFAULT (datetime('now'))
 );
 
 CREATE TABLE IF NOT EXISTS adapter_registry (

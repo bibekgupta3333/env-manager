@@ -6,12 +6,17 @@ from abc import ABC, abstractmethod
 from pathlib import Path
 from typing import Any
 
-from env_manager.models.env import EnvMetadata, FreezeResult, HealthResult, Package
+from env_manager.exceptions import AdapterError
+from env_manager.models.env import (
+    EnvMetadata,
+    FreezeResult,
+    HealthResult,
+    Package,
+)
 
 
-class InspectError(Exception):
+class InspectError(AdapterError):
     """Raised when an adapter cannot inspect an environment."""
-    pass
 
 
 class BaseAdapter(ABC):
@@ -20,7 +25,7 @@ class BaseAdapter(ABC):
     name: str = ""
     display_name: str = ""
     version: str = "0.1.0"
-    env_type: str = "local"
+    env_type: str = "project"
 
     @abstractmethod
     def find_patterns(self) -> list[str]:
@@ -46,7 +51,9 @@ class BaseAdapter(ABC):
     def check_health(self, path: Path) -> HealthResult:
         """Is this environment functional?"""
 
-    def create(self, path: Path, config: dict[str, Any] | None = None) -> EnvMetadata:
+    def create(
+        self, path: Path, config: dict[str, Any] | None = None
+    ) -> EnvMetadata:
         raise NotImplementedError(f"{self.name} does not support create")
 
     def install(self, path: Path, packages: list[str]) -> None:

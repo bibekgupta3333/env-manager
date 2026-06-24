@@ -1,7 +1,5 @@
 """Repository for snapshot CRUD operations."""
 
-# mypy: disable_error_code = no-any-return
-
 from __future__ import annotations
 
 import json
@@ -10,23 +8,40 @@ from typing import Any
 
 
 class SnapshotRepository:
-    def __init__(self, conn: sqlite3.Connection):
+    def __init__(self, conn: sqlite3.Connection) -> None:
         self.conn = conn
 
-    def insert(self, env_id: int, frozen_deps: dict[str, Any], raw_lockfile: str = "",
-               lockfile_format: str = "", tool_config: dict[str, Any] | None = None,
-               notes: str = "") -> tuple[int, int]:
-        latest = self.get_latest_version(env_id)
-        version = (latest or 0) + 1
+    def insert(
+        self,
+        env_id: int,
+        frozen_deps: dict[str, Any],
+        raw_lockfile: str = "",
+        lockfile_format: str = "",
+        tool_config: dict[str, Any] | None = None,
+        notes: str = "",
+    ) -> tuple[int, int]:
         cursor = self.conn.execute(
-            """INSERT INTO snapshots (env_id, version, frozen_deps, raw_lockfile,
-               lockfile_format, tool_config, notes)
-               VALUES (?, ?, ?, ?, ?, ?, ?)""",
-            (env_id, version, json.dumps(frozen_deps), raw_lockfile,
-             lockfile_format, json.dumps(tool_config or {}), notes),
+            """INSERT INTO snapshots
+               (env_id, version, frozen_deps, raw_lockfile,
+                lockfile_format, tool_config, notes)
+               VALUES (?, COALESCE((SELECT MAX(version)
+                 FROM snapshots WHERE env_id = ?), 0) + 1, ?, ?, ?, ?, ?)""",
+            (
+                env_id,
+                env_id,
+                json.dumps(frozen_deps),
+                raw_lockfile,
+                lockfile_format,
+                json.dumps(tool_config or {}),
+                notes,
+            ),
         )
         self.conn.commit()
         assert cursor.lastrowid is not None
+        version = self.conn.execute(
+            "SELECT version FROM snapshots WHERE rowid = ?",
+            (cursor.lastrowid,),
+        ).fetchone()[0]
         return cursor.lastrowid, version
 
     def get_latest_version(self, env_id: int) -> int | None:
@@ -35,11 +50,14 @@ class SnapshotRepository:
         ).fetchone()
         return row[0] if row else None
 
-    def get_by_env_and_version(self, env_id: int, version: int) -> sqlite3.Row | None:
-        return self.conn.execute(
+    def get_by_env_and_version(
+        self, env_id: int, version: int
+    ) -> sqlite3.Row | None:
+        row = self.conn.execute(
             "SELECT * FROM snapshots WHERE env_id = ? AND version = ?",
             (env_id, version),
         ).fetchone()
+        return row  # type: ignore[no-any-return]
 
     def get_latest(self, env_id: int) -> sqlite3.Row | None:
         version = self.get_latest_version(env_id)
@@ -62,8 +80,12 @@ class SnapshotRepository:
         ).fetchall()
 
     def prune(self, env_id: int, keep: int = 5) -> int:
+        if keep < 1:
+            return 0
         versions = self.conn.execute(
-            "SELECT version FROM snapshots WHERE env_id = ? ORDER BY version DESC",
+            "SELECT version FROM snapshots "
+            "WHERE env_id = ? "
+            "ORDER BY version DESC",
             (env_id,),
         ).fetchall()
         if len(versions) <= keep:

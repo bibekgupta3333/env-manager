@@ -1,6 +1,6 @@
 """Repository for environment CRUD operations."""
 
-# mypy: disable_error_code = no-any-return
+from __future__ import annotations
 
 import json
 import sqlite3
@@ -10,7 +10,7 @@ from env_manager.models.states import DiscoveryStatus, ManagementState
 
 
 class EnvironmentRepository:
-    def __init__(self, conn: sqlite3.Connection):
+    def __init__(self, conn: sqlite3.Connection) -> None:
         self.conn = conn
 
     def insert(
@@ -30,11 +30,20 @@ class EnvironmentRepository:
         cursor = self.conn.execute(
             """INSERT INTO environments
                (project_id, adapter, env_type, path, language, version, tool,
-                size_bytes, management_state, discovery_status, metadata, last_scanned_at)
+                size_bytes, management_state,
+                discovery_status, metadata, last_scanned_at)
                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'))""",
             (
-                project_id, adapter, env_type, path, language, version, tool,
-                size_bytes, management_state.value, discovery_status.value,
+                project_id,
+                adapter,
+                env_type,
+                path,
+                language,
+                version,
+                tool,
+                size_bytes,
+                management_state.value,
+                discovery_status.value,
                 json.dumps(metadata or {}),
             ),
         )
@@ -43,14 +52,16 @@ class EnvironmentRepository:
         return cursor.lastrowid
 
     def get_by_id(self, env_id: int) -> sqlite3.Row | None:
-        return self.conn.execute(
+        row = self.conn.execute(
             "SELECT * FROM environments WHERE id = ?", (env_id,)
         ).fetchone()
+        return row  # type: ignore[no-any-return]
 
     def get_by_path(self, path: str) -> sqlite3.Row | None:
-        return self.conn.execute(
+        row = self.conn.execute(
             "SELECT * FROM environments WHERE path = ?", (path,)
         ).fetchone()
+        return row  # type: ignore[no-any-return]
 
     def list_all(self) -> list[sqlite3.Row]:
         return self.conn.execute(
@@ -61,37 +72,47 @@ class EnvironmentRepository:
 
     def list_by_language(self, language: str) -> list[sqlite3.Row]:
         return self.conn.execute(
-            "SELECT * FROM environments WHERE language = ? AND management_state != 'purged'",
+            "SELECT * FROM environments "
+            "WHERE language = ? "
+            "AND management_state != 'purged'",
             (language,),
         ).fetchall()
 
     def list_by_project(self, project_id: int) -> list[sqlite3.Row]:
         return self.conn.execute(
-            "SELECT * FROM environments WHERE project_id = ? AND management_state != 'purged'",
+            "SELECT * FROM environments "
+            "WHERE project_id = ? "
+            "AND management_state != 'purged'",
             (project_id,),
         ).fetchall()
 
     def list_by_state(self, state: ManagementState) -> list[sqlite3.Row]:
         return self.conn.execute(
-            "SELECT * FROM environments WHERE management_state = ?", (state.value,)
+            "SELECT * FROM environments WHERE management_state = ?",
+            (state.value,),
         ).fetchall()
 
     def list_stale(self, days: int) -> list[sqlite3.Row]:
+        if days <= 0:
+            return []
         return self.conn.execute(
             """SELECT * FROM environments
-               WHERE management_state = 'ready'
+               WHERE management_state = ?
                AND last_used_at < datetime('now', ?)""",
-            (f"-{days} days",),
+            (ManagementState.READY.value, f"-{days} days"),
         ).fetchall()
 
     def list_orphaned(self) -> list[sqlite3.Row]:
         return self.conn.execute(
-            "SELECT * FROM environments WHERE is_orphaned = 1 AND management_state != 'purged'"
+            "SELECT * FROM environments "
+            "WHERE is_orphaned = 1 "
+            "AND management_state != 'purged'"
         ).fetchall()
 
     def list_by_discovery(self, status: DiscoveryStatus) -> list[sqlite3.Row]:
         return self.conn.execute(
-            "SELECT * FROM environments WHERE discovery_status = ?", (status.value,)
+            "SELECT * FROM environments WHERE discovery_status = ?",
+            (status.value,),
         ).fetchall()
 
     def update_state(self, env_id: int, state: ManagementState) -> None:
@@ -101,7 +122,9 @@ class EnvironmentRepository:
         )
         self.conn.commit()
 
-    def update_discovery_status(self, env_id: int, status: DiscoveryStatus) -> None:
+    def update_discovery_status(
+        self, env_id: int, status: DiscoveryStatus
+    ) -> None:
         self.conn.execute(
             "UPDATE environments SET discovery_status = ? WHERE id = ?",
             (status.value, env_id),
@@ -117,14 +140,18 @@ class EnvironmentRepository:
 
     def touch(self, env_id: int) -> None:
         self.conn.execute(
-            "UPDATE environments SET last_used_at = datetime('now') WHERE id = ?",
+            "UPDATE environments "
+            "SET last_used_at = datetime('now') "
+            "WHERE id = ?",
             (env_id,),
         )
         self.conn.commit()
 
     def mark_scanned(self, env_id: int) -> None:
         self.conn.execute(
-            "UPDATE environments SET last_scanned_at = datetime('now') WHERE id = ?",
+            "UPDATE environments "
+            "SET last_scanned_at = datetime('now') "
+            "WHERE id = ?",
             (env_id,),
         )
         self.conn.commit()
@@ -142,6 +169,13 @@ class EnvironmentRepository:
         self.conn.execute(
             "UPDATE environments SET is_orphaned = ? WHERE id = ?",
             (int(orphaned), env_id),
+        )
+        self.conn.commit()
+
+    def update_metadata(self, env_id: int, metadata: dict[str, Any]) -> None:
+        self.conn.execute(
+            "UPDATE environments SET metadata = ? WHERE id = ?",
+            (json.dumps(metadata), env_id),
         )
         self.conn.commit()
 

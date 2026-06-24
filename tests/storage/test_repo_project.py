@@ -1,6 +1,10 @@
 """Tests for ProjectRepository."""
 
-from env_manager.storage.database import close_connection, get_connection, init_db
+from env_manager.storage.database import (
+    close_connection,
+    get_connection,
+    init_db,
+)
 from env_manager.storage.repo_project import ProjectRepository
 
 

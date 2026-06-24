@@ -2,17 +2,42 @@
 
 from __future__ import annotations
 
-from typing import Any
+import json
+import sys
+from typing import TYPE_CHECKING
 
 from rich.console import Console
 from rich.table import Table
 
+if TYPE_CHECKING:
+    from env_manager.models.types import EnvRowDict
+
 console = Console()
 
+_HEALTH_COLORS: dict[str, str] = {
+    "healthy": "green",
+    "degraded": "yellow",
+    "broken": "red",
+}
 
-def format_env_list(envs: list[dict[str, Any]]) -> None:
+
+def format_env_list(
+    envs: list[EnvRowDict],
+    *,
+    by_project: bool = False,
+    json_output: bool = False,
+) -> None:
     if not envs:
-        console.print("[dim]No environments found.[/dim]")
+        if json_output:
+            sys.stdout.write(json.dumps({"environments": []}) + "\n")
+        else:
+            console.print("[dim]No environments found.[/dim]")
+        return
+
+    if json_output:
+        sys.stdout.write(
+            json.dumps({"environments": envs, "count": len(envs)}) + "\n"
+        )
         return
 
     table = Table(title="Environments")
@@ -23,9 +48,19 @@ def format_env_list(envs: list[dict[str, Any]]) -> None:
     table.add_column("State")
     table.add_column("Path", style="dim")
 
+    current_project = None
     for env in envs:
+        proj_name = env.get("project_name", "-")
+        pin = " [yellow]\u2605[/yellow]" if env.get("is_pinned") else ""
+        display_name = proj_name + pin
+
+        if by_project and proj_name != "-" and proj_name != current_project:
+            if current_project is not None:
+                table.add_section()
+            current_project = proj_name
+
         table.add_row(
-            env.get("project_name", "-"),
+            display_name,
             env.get("language", "-"),
             env.get("version", "-"),
             _format_size(env.get("size_bytes", 0)),
@@ -36,18 +71,23 @@ def format_env_list(envs: list[dict[str, Any]]) -> None:
     console.print(table)
 
 
-def format_env_info(env: dict[str, Any]) -> None:
-    console.print(f"[bold cyan]{env.get('project_name', 'Unknown')}[/bold cyan]")
+def format_env_info(env: EnvRowDict, *, json_output: bool = False) -> None:
+    if json_output:
+        sys.stdout.write(json.dumps(env) + "\n")
+        return
+
+    console.print(
+        f"[bold cyan]{env.get('project_name', 'Unknown')}[/bold cyan]"
+    )
     console.print(f"  Language:  {env.get('language')} {env.get('version')}")
     console.print(f"  Tool:      {env.get('tool')}")
     console.print(f"  Size:      {_format_size(env.get('size_bytes', 0))}")
     console.print(f"  State:     {env.get('management_state')}")
     console.print(f"  Path:      {env.get('path')}")
-    if env.get("last_health_result"):
-        color = {"healthy": "green", "degraded": "yellow", "broken": "red"}.get(
-            env["last_health_result"], ""
-        )
-        console.print(f"  Health:    [{color}]{env['last_health_result']}[/{color}]")
+    health = env.get("last_health_result")
+    if health:
+        color = _HEALTH_COLORS.get(health, "")
+        console.print(f"  Health:    [{color}]{health}[/{color}]")
 
 
 def _format_size(size_bytes: int) -> str:
