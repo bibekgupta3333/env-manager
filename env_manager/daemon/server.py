@@ -4,16 +4,23 @@ from contextlib import asynccontextmanager
 from pathlib import Path
 
 from fastapi import FastAPI
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, Response
 from fastapi.staticfiles import StaticFiles
 
 from env_manager.cli.db_utils import ensure_db_dir, get_db_path
 from env_manager.daemon.api import (
+    actions_api,
+    cleanup_api,
+    config_api,
+    db_api,
+    doctor_api,
     envs_api,
     health_api,
     plugins_api,
     projects_api,
+    scan_api,
     snapshots_api,
+    track_api,
     ws_api,
 )
 from env_manager.daemon.scheduler import start_scheduler, stop_scheduler
@@ -39,11 +46,18 @@ app = FastAPI(
 )
 
 # API routes first
+app.include_router(actions_api.router)
+app.include_router(cleanup_api.router)
+app.include_router(config_api.router)
+app.include_router(db_api.router)
+app.include_router(doctor_api.router)
 app.include_router(envs_api.router)
 app.include_router(projects_api.router)
 app.include_router(health_api.router)
+app.include_router(scan_api.router)
 app.include_router(snapshots_api.router)
 app.include_router(plugins_api.router)
+app.include_router(track_api.router)
 app.include_router(ws_api.router)
 
 
@@ -60,6 +74,14 @@ if DASHBOARD_DIR.exists() and assets_dir.exists():
         StaticFiles(directory=str(assets_dir)),
         name="assets",
     )
+
+
+@app.get("/favicon.svg")
+async def favicon():
+    svg = DASHBOARD_DIR / "favicon.svg"
+    if svg.exists():
+        return FileResponse(svg, media_type="image/svg+xml")
+    return Response(status_code=404)
 
 
 @app.get("/")

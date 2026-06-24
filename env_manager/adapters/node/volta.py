@@ -20,7 +20,7 @@ class NodeVoltaAdapter(BaseAdapter):
     name = "node.volta"
     display_name = "Node.js (volta)"
     version = "1.0.0"
-    env_type = "global"
+    env_type = "runtime"
 
     def find_patterns(self) -> list[str]:
         volta_dir = find_vm_path("volta") or Path.home() / ".volta"
@@ -29,10 +29,12 @@ class NodeVoltaAdapter(BaseAdapter):
                 str(volta_dir / "tools" / "image" / "node"),
                 str(volta_dir / "tools" / "image" / "packages"),
             ]
-        return ["**/package.json"]
+        return []
 
     def detect(self, path: Path) -> EnvMetadata | None:
-        # Volta stores versions in package.json under "volta" key
+        if "node_modules" in path.parts:
+            return None
+
         pkg = path / "package.json"
         if pkg.exists():
             try:
@@ -47,7 +49,7 @@ class NodeVoltaAdapter(BaseAdapter):
                         path=str(path),
                         size_bytes=self._du(path),
                         interpreter_path="node",
-                        env_type="global",
+                        env_type="project",
                     )
             except (json.JSONDecodeError, OSError, UnicodeDecodeError):
                 pass
@@ -61,7 +63,7 @@ class NodeVoltaAdapter(BaseAdapter):
             path=str(path),
             size_bytes=self._du(path),
             interpreter_path="node",
-            env_type="global",
+            env_type="runtime",
         )
 
     def get_packages(self, path: Path) -> list[Package]:
@@ -71,9 +73,13 @@ class NodeVoltaAdapter(BaseAdapter):
         return FreezeResult(raw_content="", format="package.json", packages=[])
 
     def check_health(self, path: Path) -> HealthResult:
-        if shutil.which("node"):
+        volta_bin = shutil.which("volta")
+        if volta_bin:
             return HealthResult(status="healthy")
-        return HealthResult(status="degraded")
+        volta_dir = find_vm_path("volta")
+        if volta_dir and (volta_dir / "tools" / "image" / "node").exists():
+            return HealthResult(status="healthy")
+        return HealthResult(status="degraded", errors=["volta not found"])
 
     def _du(self, path: Path) -> int:
         total = 0

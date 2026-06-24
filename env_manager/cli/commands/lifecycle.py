@@ -3,7 +3,8 @@ restore, clone, export_spec, import_spec, shell, activate."""
 
 import json
 import os
-import shutil
+import re
+import shlex
 import subprocess as sp
 import sys
 from pathlib import Path
@@ -14,6 +15,7 @@ from env_manager.adapters.registry import AdapterRegistry
 from env_manager.cli.db_utils import ensure_db_dir, get_db_path
 from env_manager.cli.resolve import resolve_env
 from env_manager.models.states import ManagementState
+from env_manager.platform import safe_rmtree
 from env_manager.storage.database import (
     close_connection,
     get_connection,
@@ -38,7 +40,16 @@ def create(
     dry_run: bool = typer.Option(False, "--dry-run", help="Preview"),
     confirm: bool = typer.Option(False, "--confirm", help="Execute"),
 ) -> None:
-    """Create a new environment."""
+    """Create a new environment.
+
+    Examples:
+
+      envs lifecycle create python@3.12 . --confirm
+
+      envs lifecycle create node@20 ~/my-project --tool nvm --confirm
+
+      envs lifecycle create python@3.12 --dry-run
+    """
     if not dry_run and not confirm:
         typer.echo("Use --confirm to execute, or --dry-run to preview")
         raise typer.Exit(1)
@@ -46,6 +57,10 @@ def create(
     language, _, version = lang_version.partition("@")
     if not language or not version:
         typer.echo("Usage: envs lifecycle create <lang@version> [path]")
+        raise typer.Exit(1)
+
+    if not re.match(r"^[\w\.\-\*x]+$", version):
+        typer.echo(f"Invalid version: {version}")
         raise typer.Exit(1)
 
     ensure_db_dir()
@@ -74,6 +89,10 @@ def create(
         target = Path(path).resolve()
         if not target.name.startswith("."):
             target = target / ".venv"
+
+        if target.exists() and not dry_run:
+            typer.echo(f"Directory already exists: {target}")
+            raise typer.Exit(1)
 
         if dry_run:
             typer.echo(f"Would create {adapter.name} env at {target}")
@@ -240,7 +259,16 @@ def remove(
     dry_run: bool = typer.Option(False, "--dry-run"),
     confirm: bool = typer.Option(False, "--confirm"),
 ) -> None:
-    """Delete an environment."""
+    """Delete an environment.
+
+    Examples:
+
+      envs lifecycle remove my-project --confirm
+
+      envs lifecycle remove .venv --snapshot --confirm
+
+      envs lifecycle remove my-project --dry-run
+    """
     if not dry_run and not confirm:
         typer.echo("Use --confirm to execute, or --dry-run to preview")
         raise typer.Exit(1)
@@ -263,6 +291,7 @@ def remove(
             )
             return
 
+        snapshot_created = False
         if snapshot:
             registry = AdapterRegistry(conn)
             adapter = registry.get(env["adapter"])
@@ -275,22 +304,23 @@ def remove(
                         raw_lockfile=fr.raw_content,
                         lockfile_format=fr.format,
                     )
+                    snapshot_created = True
                 except (OSError, ValueError):
-                    pass
+                    typer.echo("Warning: snapshot freeze failed, env deleted")
 
         env_repo = EnvironmentRepository(conn)
         env_repo.update_state(
             env["id"],
             (
                 ManagementState.SNAPSHOTTED
-                if snapshot
+                if snapshot_created
                 else ManagementState.DELETED
             ),
         )
 
         env_path = Path(env["path"])
         if env_path.exists():
-            shutil.rmtree(env_path, ignore_errors=True)
+            safe_rmtree(env_path)
 
         typer.echo(f"Removed: {env['path']}")
         if snapshot:
@@ -436,7 +466,13 @@ def export_spec(
         }
         text = json.dumps(spec, indent=2)
         if output:
-            Path(output).write_text(text)
+            output_path = Path(output)
+            if not output_path.resolve().parent.exists():
+                typer.echo(
+                    f"Output directory does not exist: {output_path.parent}"
+                )
+                raise typer.Exit(1)
+            output_path.write_text(text)
             typer.echo(f"Exported to {output}")
         else:
             typer.echo(text)
@@ -463,9 +499,24 @@ def import_spec(
     conn = get_connection(db_path)
 
     try:
-        spec = json.loads(Path(spec_file).read_text())
-        lang = spec["language"]
-        version = spec["version_req"]
+        spec_path = Path(spec_file)
+        if not spec_path.exists() or not spec_path.is_file():
+            typer.echo(f"File not found: {spec_file}")
+            raise typer.Exit(1)
+        try:
+            spec = json.loads(spec_path.read_text())
+        except FileNotFoundError:
+            typer.echo(f"File not found: {spec_file}")
+            raise typer.Exit(1)
+        except json.JSONDecodeError as e:
+            typer.echo(f"Invalid JSON in {spec_file}: {e}")
+            raise typer.Exit(1)
+
+        lang = spec.get("language")
+        version = spec.get("version_req")
+        if not lang or not version:
+            typer.echo("Spec must contain 'language' and 'version_req' fields")
+            raise typer.Exit(1)
         target = Path(path).resolve()
         if not target.name.startswith("."):
             target = target / ".venv"
@@ -525,7 +576,8 @@ def shell(
                     [
                         shell_bin,
                         "-c",
-                        f"source {activate_script}; exec {shell_bin}",
+                        f"source {shlex.quote(str(activate_script))};"
+                        f" exec {shell_bin}",
                     ]
                 )
                 return
@@ -565,14 +617,19 @@ def activate(
         activate_line = ""
 
         if lang == "python":
-            bin_dir = "Scripts" if os.name == "nt" else "bin"
-            activate_script = env_path / bin_dir / "activate"
-            if activate_script.exists():
-                activate_line = f"source {activate_script}"
-            else:
-                bat = env_path / bin_dir / "activate.bat"
+            if os.name == "nt":
+                bat = env_path / "Scripts" / "activate.bat"
+                ps1 = env_path / "Scripts" / "Activate.ps1"
                 if bat.exists():
                     activate_line = str(bat)
+                elif ps1.exists():
+                    activate_line = (
+                        "powershell -ExecutionPolicy Bypass -File" f" {ps1}"
+                    )
+            else:
+                activate_script = env_path / "bin" / "activate"
+                if activate_script.exists():
+                    activate_line = f"source {activate_script}"
         elif lang == "node":
             bin_dir = "Scripts" if os.name == "nt" else "bin"
             activate_line = (

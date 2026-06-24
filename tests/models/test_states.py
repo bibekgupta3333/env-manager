@@ -54,7 +54,7 @@ class TestEnvMetadata:
         assert meta.language == "python"
         assert meta.tool == "venv"
         assert meta.size_bytes == 245_000_000
-        assert meta.env_type == "local"
+        assert meta.env_type == "project"
 
     def test_default_env_type(self):
         meta = EnvMetadata(
@@ -65,9 +65,9 @@ class TestEnvMetadata:
             size_bytes=0,
             interpreter_path="/bin/python",
         )
-        assert meta.env_type == "local"
+        assert meta.env_type == "project"
 
-    def test_global_env_type(self):
+    def test_runtime_env_type(self):
         meta = EnvMetadata(
             language="node",
             tool="nvm",
@@ -75,9 +75,9 @@ class TestEnvMetadata:
             path="/home/user/.nvm/versions/node/v20.10.0",
             size_bytes=150_000_000,
             interpreter_path="/home/user/.nvm/versions/node/v20.10.0/bin/node",
-            env_type="global",
+            env_type="runtime",
         )
-        assert meta.env_type == "global"
+        assert meta.env_type == "runtime"
 
 
 class TestPackage:

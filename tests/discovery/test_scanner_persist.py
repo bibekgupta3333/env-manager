@@ -9,7 +9,7 @@ class FakePersistAdapter(BaseAdapter):
     name = "test.persist"
     display_name = "Test Persist"
     version = "0.1"
-    env_type = "local"
+    env_type = "project"
 
     def find_patterns(self):
         return ["**/.test-env"]

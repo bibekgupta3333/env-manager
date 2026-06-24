@@ -74,7 +74,8 @@ def doctor(
             adapter = registry.get(env["adapter"])
             if not adapter:
                 typer.echo(
-                    f"[dim]{proj_name}:[/dim] no adapter available, skipping"
+                    f"  [!] {proj_name}: no adapter available for "
+                    f"'{env['adapter']}', skipping"
                 )
                 continue
 

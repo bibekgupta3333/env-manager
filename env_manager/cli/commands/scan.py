@@ -1,5 +1,6 @@
 """Scan command — discover environments."""
 
+import shutil
 from pathlib import Path
 
 import typer
@@ -48,12 +49,20 @@ def scan(
             raise typer.Exit(1)
 
         scan_paths = path if path else DEFAULT_SCAN_PATHS
+        for p in scan_paths:
+            resolved = str(Path(p).expanduser())
+            if not Path(resolved).exists():
+                typer.echo(
+                    f"Warning: scan path does not exist: {resolved}", err=True
+                )
         scanner = Scanner(conn, adapters)
 
         for p in scan_paths:
             resolved = str(Path(p).expanduser())
             prefix = "Incremental scan" if incremental else "Scanning"
             label = f"{prefix} {resolved}"
+            if len(label) > 60:
+                label = label[:57] + "..."
 
             with Progress(
                 SpinnerColumn(),
@@ -64,10 +73,11 @@ def scan(
 
                 def make_callback(task_id, lbl):
                     def cb(dirs: int, found: int) -> None:
-                        progress.update(
-                            task_id,
-                            description=f"{lbl} — {dirs} dirs, {found} envs",
-                        )
+                        max_width = shutil.get_terminal_size().columns - 20
+                        desc = f"{lbl} — {dirs} dirs, {found} envs"
+                        if len(desc) > max_width:
+                            desc = "..." + desc[-(max_width - 3) :]
+                        progress.update(task_id, description=desc)
 
                     return cb
 

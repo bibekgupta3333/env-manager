@@ -8,7 +8,7 @@ from apscheduler.schedulers.background import BackgroundScheduler
 
 from env_manager.adapters.registry import AdapterRegistry
 from env_manager.discovery.scanner import Scanner
-from env_manager.storage.database import get_connection
+from env_manager.storage.database import close_connection, get_connection
 
 logger = logging.getLogger(__name__)
 
@@ -41,11 +41,13 @@ def stop_scheduler() -> None:
 
 def _run_periodic_scan(db_path: str) -> None:
     """Run a periodic scan in the background."""
+    conn = get_connection(db_path)
     try:
-        conn = get_connection(db_path)
         registry = AdapterRegistry(conn)
         adapters = registry.get_all_enabled()
         scanner = Scanner(conn, adapters)
         scanner.scan(str(Path.home() / "projects"), depth=3)
     except Exception:
-        logger.debug("periodic scan failed", exc_info=True)
+        logger.error("periodic scan failed", exc_info=True)
+    finally:
+        close_connection(db_path)

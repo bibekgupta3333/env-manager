@@ -22,64 +22,60 @@ class NodeNvmAdapter(BaseAdapter):
     name = "node.nvm"
     display_name = "Node.js (nvm)"
     version = "1.0.0"
-    env_type = "global"
+    env_type = "runtime"
 
     def find_patterns(self) -> list[str]:
         return ["**/.nvmrc", "**/package.json"]
 
     def detect(self, path: Path) -> EnvMetadata | None:
-        nvmrc = path / ".nvmrc"
-        pkg_json = path / "package.json"
-        node_modules = path / "node_modules"
+        if "node_modules" in path.parts:
+            return None
 
-        # .nvmrc takes priority
+        # ----- RUNTIME detection first -----
+        node_bin = path / "bin" / node_exe_name()
+        npm_pkg = path / "lib" / "node_modules" / "npm" / "package.json"
+        if node_bin.exists() and npm_pkg.exists():
+            try:
+                data = json.loads(npm_pkg.read_text())
+                if data.get("name") == "npm":
+                    return EnvMetadata(
+                        language="node",
+                        tool="nvm",
+                        version=self._get_node_version(path),
+                        path=str(path),
+                        size_bytes=self._du(path),
+                        interpreter_path=str(node_bin),
+                        env_type="runtime",
+                    )
+            except (json.JSONDecodeError, OSError):
+                pass
+
+        # ----- PROJECT detection -----
+        nvmrc = path / ".nvmrc"
         if nvmrc.exists():
             version = nvmrc.read_text().strip()
             nvm_path = find_vm_path("nvm", "versions", "node", f"v{version}")
-            if nvm_path:
+            nvm_installed = find_vm_path("nvm") is not None
+            if not nvm_installed:
+                return None
+            if nvm_path and nvm_path.exists():
                 return EnvMetadata(
-                    language="node",
-                    tool="nvm",
-                    version=version,
-                    path=str(path),
-                    size_bytes=self._du(nvm_path),
-                    interpreter_path=str(nvm_path / node_exe_name()),
-                    env_type="global",
+                    language="node", tool="nvm", version=version,
+                    path=str(path), size_bytes=self._du(path),
+                    interpreter_path=str(
+                        nvm_path / "bin" / node_exe_name()
+                    ),
+                    env_type="project",
                 )
             return EnvMetadata(
-                language="node",
-                tool="nvm",
-                version=version,
+                language="node", tool="nvm", version=version,
                 path=str(path),
                 size_bytes=(
-                    self._du(node_modules) if node_modules.exists() else 0
+                    self._du(path / "node_modules")
+                    if (path / "node_modules").exists() else 0
                 ),
                 interpreter_path="node",
-                env_type="global",
-            )
-
-        # package.json → Node project
-        if pkg_json.exists():
-            try:
-                data = json.loads(pkg_json.read_text())
-                engines = data.get("engines", {})
-                version = str(engines.get("node", "unknown"))
-            except (json.JSONDecodeError, OSError, UnicodeDecodeError):
-                version = "unknown"
-
-            size = (
-                self._du(node_modules)
-                if node_modules.exists()
-                else self._du(path)
-            )
-            return EnvMetadata(
-                language="node",
-                tool="nvm",
-                version=version,
-                path=str(path),
-                size_bytes=size,
-                interpreter_path="node",
-                env_type="global",
+                env_type="project",
             )
 
         return None
@@ -94,13 +90,17 @@ class NodeNvmAdapter(BaseAdapter):
             size_bytes=self._du(path),
             interpreter_path=self._find_node(path),
             packages_count=len(self.get_packages(path)),
-            env_type="global",
+            env_type="runtime",
         )
 
     def get_packages(self, path: Path) -> list[Package]:
-        node_modules: Path | None = path / "lib" / "node_modules"
-        if node_modules is not None and not node_modules.exists():
-            node_modules = self._find_node_modules(path)
+        node_modules: Path = path / "lib" / "node_modules"
+        if not node_modules.exists():
+            found = self._find_node_modules(path)
+            if found is None:
+                node_modules = path / "lib" / "node_modules"
+            else:
+                node_modules = found
         try:
             result = subprocess.run(
                 [
@@ -186,9 +186,13 @@ class NodeNvmAdapter(BaseAdapter):
             return "unknown"
 
     def _find_node(self, path: Path) -> str:
-        node_path = path / "bin" / "node"
+        node_path = path / "bin" / node_exe_name()
         if node_path.exists():
             return str(node_path)
+        # nvm-windows stores node.exe in the root directory
+        node_path_root = path / node_exe_name()
+        if node_path_root.exists():
+            return str(node_path_root)
         # Fallback: try system node via PATH
         system_node = shutil.which("node")
         if system_node:

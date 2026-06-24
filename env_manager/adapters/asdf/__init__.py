@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import os
 from pathlib import Path
 
 from env_manager.adapters.base import BaseAdapter
@@ -20,7 +21,7 @@ class AsdfAdapter(BaseAdapter):
     name = "asdf.universal"
     display_name = "asdf (Universal)"
     version = "1.0.0"
-    env_type = "global"
+    env_type = "runtime"
 
     def find_patterns(self) -> list[str]:
         patterns = ["**/.tool-versions"]
@@ -63,7 +64,7 @@ class AsdfAdapter(BaseAdapter):
                         path=str(proj_path),
                         size_bytes=self._du(proj_path),
                         interpreter_path=lang,
-                        env_type="global",
+                        env_type="project",
                     )
         except (OSError, UnicodeDecodeError):
             pass
@@ -83,7 +84,7 @@ class AsdfAdapter(BaseAdapter):
                 path=str(path),
                 size_bytes=self._du(path),
                 interpreter_path=str(path / "bin" / lang),
-                env_type="global",
+                env_type="runtime",
             )
         return None
 
@@ -95,7 +96,7 @@ class AsdfAdapter(BaseAdapter):
             path=str(path),
             size_bytes=self._du(path),
             interpreter_path="",
-            env_type="global",
+            env_type="runtime",
         )
 
     def get_packages(self, path: Path) -> list[Package]:
@@ -107,7 +108,13 @@ class AsdfAdapter(BaseAdapter):
         )
 
     def check_health(self, path: Path) -> HealthResult:
-        return HealthResult(status="healthy")
+        env_info = self.inspect(path)
+        interp = env_info.interpreter_path
+        if interp and Path(interp).exists() and os.access(interp, os.X_OK):
+            return HealthResult(status="healthy")
+        return HealthResult(
+            status="broken", errors=[f"Interpreter not found: {interp}"]
+        )
 
     def _du(self, path: Path) -> int:
         total = 0

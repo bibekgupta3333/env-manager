@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { fetchEnvs } from '../api';
+import { fetchEnvs, triggerCleanup } from '../api';
 import SizeBar from './SizeBar';
 import { createToast } from './Toast';
 
@@ -82,8 +82,14 @@ export default function CleanupView() {
     }
   };
 
-  const handleCleanup = () => {
-    createToast(`Use CLI: envs cleanup --stale ${days} --confirm`, 'info');
+  const handleCleanup = async () => {
+    try {
+      const result = await triggerCleanup(days, false, false);
+      createToast(`Cleaned up ${result.processed} environments — freed ${fmtSize(result.freed_bytes)}`, 'success');
+      setCandidates(null);
+    } catch {
+      createToast('Cleanup failed', 'error');
+    }
   };
 
   const selectedSize = candidates
@@ -179,7 +185,7 @@ export default function CleanupView() {
           </div>
 
           <p style={{ color: 'var(--gray-9)', fontSize: 'var(--text-xs)', marginTop: 'var(--space-3)' }}>
-            Run <code style={{ color: 'var(--violet-9)', background: 'var(--violet-3)', padding: '2px 6px', borderRadius: 'var(--radius-xs)' }}>envs cleanup --stale {days} --dry-run</code> in terminal for full preview.
+            Cleanup is now available from the dashboard. Use <code style={{ color: 'var(--violet-9)', background: 'var(--violet-3)', padding: '2px 6px', borderRadius: 'var(--radius-xs)' }}>envs cleanup --stale {days} --dry-run</code> in terminal for a full preview.
           </p>
         </>
       )}

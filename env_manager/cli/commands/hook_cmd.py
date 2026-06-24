@@ -108,6 +108,13 @@ def _detect_shell() -> tuple[str, Path]:
 
     shell_bin = os.environ.get("SHELL", "/bin/bash")
     shell = Path(shell_bin).name
+    if shell not in ("zsh", "fish", "bash"):
+        if os.environ.get("FISH_VERSION") or os.environ.get("FISH_PID"):
+            shell = "fish"
+        elif os.environ.get("ZSH_VERSION"):
+            shell = "zsh"
+        else:
+            shell = "bash"
     if "zsh" in shell:
         return "zsh", Path.home() / ".zshrc"
     if "fish" in shell:

@@ -25,7 +25,7 @@ class BaseAdapter(ABC):
     name: str = ""
     display_name: str = ""
     version: str = "0.1.0"
-    env_type: str = "local"
+    env_type: str = "project"
 
     @abstractmethod
     def find_patterns(self) -> list[str]:

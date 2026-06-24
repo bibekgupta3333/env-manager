@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import StatusBadge from './StatusBadge';
 import { createToast } from './Toast';
+import { installPackage, pinEnv, unpinEnv, removeEnv, restoreEnv } from '../api';
 
 const CloseIcon = () => (
   <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -165,7 +166,17 @@ export default function EnvDetail({ env, onClose }) {
                 Actions
               </div>
 
-              <button className="action-btn" onClick={() => createToast('Install not available via dashboard. Use the CLI.', 'info')}>
+              <button className="action-btn" onClick={async () => {
+                const pkgName = window.prompt('Package name:');
+                if (!pkgName) return;
+                try {
+                  await installPackage(env.id, [pkgName]);
+                  createToast(`Installed ${pkgName}`, 'success');
+                  onClose();
+                } catch {
+                  createToast('Install failed', 'error');
+                }
+              }}>
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                   <line x1="12" y1="5" x2="12" y2="19"/>
                   <line x1="5" y1="12" x2="19" y2="12"/>
@@ -176,7 +187,20 @@ export default function EnvDetail({ env, onClose }) {
                 </div>
               </button>
 
-              <button className="action-btn" onClick={() => createToast('Pin not available via dashboard. Use the CLI.', 'info')}>
+              <button className="action-btn" onClick={async () => {
+                try {
+                  if (env.pinned) {
+                    await unpinEnv(env.id);
+                    createToast('Environment unpinned', 'success');
+                  } else {
+                    await pinEnv(env.id);
+                    createToast('Environment pinned', 'success');
+                  }
+                  onClose();
+                } catch {
+                  createToast('Failed to update pin', 'error');
+                }
+              }}>
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                   <path d="M12 2L15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2z"/>
                 </svg>
@@ -186,7 +210,16 @@ export default function EnvDetail({ env, onClose }) {
                 </div>
               </button>
 
-              <button className="action-btn danger" onClick={() => createToast('Remove not available via dashboard. Use the CLI.', 'info')}>
+              <button className="action-btn danger" onClick={async () => {
+                if (!window.confirm(`Remove environment "${env.project_name || env.path}"?`)) return;
+                try {
+                  await removeEnv(env.id, false);
+                  createToast('Environment removed', 'success');
+                  onClose();
+                } catch {
+                  createToast('Remove failed', 'error');
+                }
+              }}>
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                   <polyline points="3 6 5 6 21 6"/>
                   <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>

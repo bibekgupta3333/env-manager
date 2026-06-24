@@ -26,21 +26,20 @@ class AdapterRegistry:
                 "SELECT * FROM adapter_registry"
             ).fetchall()
 
-        adapter_classes = {}
+        adapter_instances = {}
         for cls in discover_builtin_adapters() + discover_pip_adapters():
             inst = cls()
-            adapter_classes[inst.name] = cls
+            adapter_instances[inst.name] = inst
 
         # Load enabled adapters from DB
         db_names = {r["name"] for r in rows}
         for row in rows:
-            if row["enabled"] and row["name"] in adapter_classes:
-                self._adapters[row["name"]] = adapter_classes[row["name"]]()
+            if row["enabled"] and row["name"] in adapter_instances:
+                self._adapters[row["name"]] = adapter_instances[row["name"]]
 
         # Seed any newly discovered adapters not yet in DB
-        for name, cls in adapter_classes.items():
+        for name, inst in adapter_instances.items():
             if name not in db_names:
-                inst = cls()
                 self.conn.execute(
                     """INSERT OR IGNORE INTO adapter_registry
                        (name, display_name, version, env_type, source)
@@ -53,7 +52,7 @@ class AdapterRegistry:
                     ),
                 )
                 self.conn.commit()
-                self._adapters[name] = cls()
+                self._adapters[name] = inst
 
     def _seed_builtins(self) -> None:
         for cls in discover_builtin_adapters():
@@ -71,7 +70,9 @@ class AdapterRegistry:
 
     def get_for_language(self, language: str) -> list[BaseAdapter]:
         return [
-            a for a in self._adapters.values() if a.name.startswith(language)
+            a
+            for a in self._adapters.values()
+            if a.name.split(".")[0] == language
         ]
 
     def get_all_enabled(self) -> list[BaseAdapter]:
@@ -102,6 +103,8 @@ class AdapterRegistry:
 
     def list_all(self) -> list[dict[str, Any]]:
         rows = self.conn.execute(
-            "SELECT * FROM adapter_registry ORDER BY name"
+            "SELECT name, display_name, version, env_type, source, "
+            "source_path, enabled, installed_at "
+            "FROM adapter_registry ORDER BY name"
         ).fetchall()
         return [dict(r) for r in rows]

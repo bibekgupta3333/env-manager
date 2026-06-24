@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import shutil
 from pathlib import Path
 from typing import Any
 
@@ -12,6 +11,7 @@ import typer.core
 from env_manager.adapters.registry import AdapterRegistry
 from env_manager.cli.db_utils import ensure_db_dir, get_db_path
 from env_manager.models.states import ManagementState
+from env_manager.platform import safe_rmtree
 from env_manager.storage.database import (
     close_connection,
     get_connection,
@@ -46,13 +46,12 @@ def cleanup(
     ensure_db_dir()
     db_path = get_db_path()
     init_db(db_path)
-    conn = get_connection(db_path)
 
-    # If a subcommand (gc, compare) was invoked, skip the guard
+    # If a subcommand (gc, compare) was invoked, skip the parent callback
     if ctx.invoked_subcommand is not None:
-        conn.close()
-        close_connection(db_path)
         return
+
+    conn = get_connection(db_path)
 
     if not dry_run and not confirm:
         typer.echo("Use --confirm to execute, or --dry-run to preview")
@@ -109,6 +108,7 @@ def cleanup(
         processed = 0
         freed = 0
         for env in candidates:
+            snapshot_created = False
             if snapshot:
                 adapter = registry.get(env["adapter"])
                 if adapter:
@@ -123,14 +123,17 @@ def cleanup(
                             raw_lockfile=freeze_result.raw_content,
                             lockfile_format=freeze_result.format,
                         )
+                        snapshot_created = True
                     except (OSError, ValueError):
-                        pass
+                        typer.echo(
+                            "Warning: snapshot freeze failed, env deleted"
+                        )
 
             env_repo.update_state(
                 env["id"],
                 (
                     ManagementState.SNAPSHOTTED
-                    if snapshot
+                    if snapshot_created
                     else ManagementState.DELETED
                 ),
             )
@@ -144,7 +147,7 @@ def cleanup(
             env_path = Path(env["path"])
             if env_path.exists():
 
-                shutil.rmtree(env_path, ignore_errors=True)
+                safe_rmtree(env_path)
 
             processed += 1
             freed += env.get("size_bytes", 0)

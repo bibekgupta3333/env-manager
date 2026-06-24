@@ -9,20 +9,21 @@ from pathlib import Path
 from typing import Any
 
 from env_manager.adapters.base import BaseAdapter
-from env_manager.exceptions import AdapterError  # noqa: F401
+from env_manager.exceptions import AdapterError
 from env_manager.models.env import (
     EnvMetadata,
     FreezeResult,
     HealthResult,
     Package,
 )
+from env_manager.platform import pip_exe_name
 
 
 class PythonVenvAdapter(BaseAdapter):
     name = "python.venv"
     display_name = "Python (venv)"
     version = "1.0.0"
-    env_type = "local"
+    env_type = "project"
 
     def find_patterns(self) -> list[str]:
         return ["**/pyvenv.cfg"]
@@ -151,6 +152,8 @@ class PythonVenvAdapter(BaseAdapter):
     def create(
         self, path: Path, config: dict[str, Any] | None = None
     ) -> EnvMetadata:
+        if path.exists():
+            raise AdapterError(f"Target directory already exists: {path}")
         version = (config or {}).get("version", "")
         # Try exact version first, then major.minor, then default python3
         candidates = []
@@ -181,7 +184,7 @@ class PythonVenvAdapter(BaseAdapter):
         return self.inspect(path)
 
     def install(self, path: Path, packages: list[str]) -> None:
-        pip_bin = str(self._python_bin(path).parent / "pip")
+        pip_bin = str(self._python_bin(path).parent / pip_exe_name())
         try:
             subprocess.run(
                 [pip_bin, "install"] + list(packages),
@@ -201,7 +204,7 @@ class PythonVenvAdapter(BaseAdapter):
             )
 
     def uninstall(self, path: Path, packages: list[str]) -> None:
-        pip_bin = str(self._python_bin(path).parent / "pip")
+        pip_bin = str(self._python_bin(path).parent / pip_exe_name())
         try:
             subprocess.run(
                 [pip_bin, "uninstall", "-y"] + list(packages),
@@ -221,7 +224,7 @@ class PythonVenvAdapter(BaseAdapter):
             )
 
     def update(self, path: Path, packages: list[str] | None = None) -> None:
-        pip_bin = str(self._python_bin(path).parent / "pip")
+        pip_bin = str(self._python_bin(path).parent / pip_exe_name())
         targets = list(packages) if packages else []
         try:
             subprocess.run(

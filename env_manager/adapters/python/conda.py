@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import re
 from pathlib import Path
 
 from env_manager.adapters.base import BaseAdapter
@@ -11,14 +12,14 @@ from env_manager.models.env import (
     HealthResult,
     Package,
 )
-from env_manager.platform import find_vm_path
+from env_manager.platform import find_vm_path, python_bin_dir, python_exe_name
 
 
 class PythonCondaAdapter(BaseAdapter):
     name = "python.conda"
     display_name = "Python (conda)"
     version = "1.0.0"
-    env_type = "global"
+    env_type = "runtime"
 
     def find_patterns(self) -> list[str]:
         conda_root = find_vm_path("conda")
@@ -45,11 +46,10 @@ class PythonCondaAdapter(BaseAdapter):
             if history.exists():
                 try:
                     for line in history.read_text().splitlines():
-                        if "python" in line:
-                            parts = line.split()
-                            if len(parts) > 1:
-                                version = parts[1]
-                                break
+                        m = re.match(r"^\s*(python)\s+(\S+)", line)
+                        if m:
+                            version = m.group(2)
+                            break
                 except (OSError, UnicodeDecodeError):
                     pass
             return EnvMetadata(
@@ -58,8 +58,10 @@ class PythonCondaAdapter(BaseAdapter):
                 version=version,
                 path=str(path),
                 size_bytes=self._du(path),
-                interpreter_path=str(path / "bin" / "python"),
-                env_type="global",
+                interpreter_path=str(
+                    path / python_bin_dir(path) / python_exe_name()
+                ),
+                env_type="runtime",
             )
         return None
 
@@ -70,8 +72,10 @@ class PythonCondaAdapter(BaseAdapter):
             version="unknown",
             path=str(path),
             size_bytes=self._du(path),
-            interpreter_path=str(path / "bin" / "python"),
-            env_type="global",
+            interpreter_path=str(
+                path / python_bin_dir(path) / python_exe_name()
+            ),
+            env_type="runtime",
         )
 
     def get_packages(self, path: Path) -> list[Package]:
@@ -83,7 +87,7 @@ class PythonCondaAdapter(BaseAdapter):
         )
 
     def check_health(self, path: Path) -> HealthResult:
-        python_bin = path / "bin" / "python"
+        python_bin = path / python_bin_dir(path) / python_exe_name()
         if python_bin.exists():
             return HealthResult(status="healthy")
         return HealthResult(status="broken", errors=["python not found"])

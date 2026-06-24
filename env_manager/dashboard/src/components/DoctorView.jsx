@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { fetchEnvs } from '../api';
+import { triggerDoctor } from '../api';
 import StatusBadge from './StatusBadge';
 import { createToast } from './Toast';
 
@@ -18,10 +18,8 @@ export default function DoctorView() {
     setLoading(true);
     setHasRun(true);
     try {
-      const data = await fetchEnvs();
-      const envs = data.environments || [];
-      await new Promise((r) => setTimeout(r, 600 + Math.random() * 400));
-      setResults(envs);
+      const data = await triggerDoctor();
+      setResults(data.results || []);
     } catch {
       createToast('Doctor check failed', 'error');
     } finally {
@@ -32,10 +30,10 @@ export default function DoctorView() {
   useEffect(() => {
     runDoctor();
   }, []);
-  const healthy = results ? results.filter((e) => e.last_health_result === 'healthy').length : 0;
-  const broken = results ? results.filter((e) => e.last_health_result === 'broken').length : 0;
-  const degraded = results ? results.filter((e) => e.last_health_result === 'degraded').length : 0;
-  const unchecked = results ? results.filter((e) => !e.last_health_result || e.last_health_result === 'unchecked').length : 0;
+  const healthy = results ? results.filter((e) => e.status === 'healthy').length : 0;
+  const broken = results ? results.filter((e) => e.status === 'broken').length : 0;
+  const degraded = results ? results.filter((e) => e.status === 'degraded').length : 0;
+  const unchecked = results ? results.filter((e) => !e.status || e.status === 'unchecked').length : 0;
 
   return (
     <div>
@@ -111,24 +109,25 @@ export default function DoctorView() {
 
           <div className="doctor-results">
             {results.map((env) => {
-              const status = env.last_health_result || 'unchecked';
+              const status = env.status || 'unchecked';
+              const errorMsg = env.errors && env.errors.length > 0 ? env.errors[0] : null;
               return (
-                <div key={env.id} className="doctor-card">
+                <div key={env.env_id} className="doctor-card">
                   <div className="doctor-card-top">
                     <div className="doctor-card-name">
-                      {env.project_name || env.path}
+                      {env.project_name}
                     </div>
                     <StatusBadge status={status} size="sm" />
                   </div>
                   <div className="doctor-card-detail">
                     <span>{env.language} {env.version || ''}</span>
                   </div>
-                  {status === 'broken' && env.last_health_error && (
+                  {status === 'broken' && errorMsg && (
                     <div className="doctor-card-error">
-                      {env.last_health_error}
+                      {errorMsg}
                     </div>
                   )}
-                  {status === 'broken' && !env.last_health_error && (
+                  {status === 'broken' && !errorMsg && (
                     <div className="doctor-card-suggestion">
                       Run <code style={{ background: 'var(--green-3)', padding: '1px 4px', borderRadius: '2px' }}>envs doctor --fix</code> to attempt repair
                     </div>

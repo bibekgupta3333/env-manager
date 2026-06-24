@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import shutil
 from pathlib import Path
 
 from env_manager.adapters.base import BaseAdapter
@@ -17,7 +18,7 @@ class PythonPipenvAdapter(BaseAdapter):
     name = "python.pipenv"
     display_name = "Python (pipenv)"
     version = "1.0.0"
-    env_type = "local"
+    env_type = "project"
 
     def find_patterns(self) -> list[str]:
         return ["**/Pipfile"]
@@ -26,6 +27,8 @@ class PythonPipenvAdapter(BaseAdapter):
         pipfile = path / "Pipfile"
         if not pipfile.exists():
             return None
+        if not shutil.which("pipenv"):
+            return None  # pipenv not installed — false positive
         version = self._read_version(pipfile)
         return EnvMetadata(
             language="python",
@@ -55,7 +58,14 @@ class PythonPipenvAdapter(BaseAdapter):
         return FreezeResult(raw_content=raw, format="Pipfile", packages=[])
 
     def check_health(self, path: Path) -> HealthResult:
-        return HealthResult(status="healthy")
+        import shutil
+
+        pipenv_bin = shutil.which("pipenv")
+        if pipenv_bin:
+            return HealthResult(status="healthy")
+        return HealthResult(
+            status="broken", errors=["pipenv CLI not found on PATH"]
+        )
 
     def _read_version(self, pipfile: Path) -> str:
         try:

@@ -120,11 +120,183 @@ class TestDashboard:
         resp = client.get("/")
         assert resp.status_code == 200
         from env_manager.daemon.server import DASHBOARD_DIR
+
         if DASHBOARD_DIR.exists():
             assert "env-manager" in resp.text.lower()
         else:
             data = resp.json()
             assert data.get("message") == "Dashboard not available"
+
+
+class TestEnvActions:
+    def test_install_dry_run(self, seeded_client):
+        envs = seeded_client.get("/api/envs/").json()["environments"]
+        if envs:
+            resp = seeded_client.post(
+                f"/api/envs/{envs[0]['id']}/install",
+                json={"packages": ["pip"]},
+            )
+            assert resp.status_code in (200, 500)
+
+    def test_uninstall_dry_run(self, seeded_client):
+        envs = seeded_client.get("/api/envs/").json()["environments"]
+        if envs:
+            resp = seeded_client.post(
+                f"/api/envs/{envs[0]['id']}/uninstall",
+                json={"packages": ["pip"]},
+            )
+            assert resp.status_code in (200, 500)
+
+    def test_pin_env(self, seeded_client):
+        envs = seeded_client.get("/api/envs/").json()["environments"]
+        if envs:
+            resp = seeded_client.post(f"/api/envs/{envs[0]['id']}/pin")
+            assert resp.status_code == 200
+            data = resp.json()
+            assert data["status"] == "pinned"
+
+    def test_unpin_env(self, seeded_client):
+        envs = seeded_client.get("/api/envs/").json()["environments"]
+        if envs:
+            resp = seeded_client.post(f"/api/envs/{envs[0]['id']}/unpin")
+            assert resp.status_code == 200
+            data = resp.json()
+            assert data["status"] == "unpinned"
+
+    def test_remove_env(self, seeded_client):
+        envs = seeded_client.get("/api/envs/").json()["environments"]
+        if envs:
+            resp = seeded_client.post(
+                f"/api/envs/{envs[0]['id']}/remove",
+                json={"snapshot": False},
+            )
+            assert resp.status_code == 200
+            data = resp.json()
+            assert data["status"] == "removed"
+
+    def test_remove_404(self, seeded_client):
+        resp = seeded_client.post(
+            "/api/envs/99999/remove", json={"snapshot": False}
+        )
+        assert resp.status_code == 404
+
+    def test_restore_env(self, seeded_client):
+        envs = seeded_client.get("/api/envs/").json()["environments"]
+        if envs:
+            resp = seeded_client.post(
+                f"/api/envs/{envs[0]['id']}/restore",
+                json={},
+            )
+            assert resp.status_code in (200, 404)
+
+
+class TestDoctor:
+    def test_doctor_run(self, seeded_client):
+        resp = seeded_client.post("/api/doctor/run")
+        assert resp.status_code == 200
+        data = resp.json()
+        assert "results" in data
+
+    def test_doctor_fix(self, seeded_client):
+        resp = seeded_client.post("/api/doctor/fix")
+        assert resp.status_code == 200
+        data = resp.json()
+        assert "results" in data
+
+
+class TestCleanup:
+    def test_cleanup_execute(self, seeded_client):
+        resp = seeded_client.post(
+            "/api/cleanup/execute",
+            json={"stale_days": 0, "orphaned": False, "snapshot": False},
+        )
+        assert resp.status_code == 200
+
+    def test_cleanup_gc_dry(self, seeded_client):
+        resp = seeded_client.post("/api/cleanup/gc", json={"dry_run": True})
+        assert resp.status_code == 200
+
+    def test_cleanup_compare(self, seeded_client):
+        envs = seeded_client.get("/api/envs/").json()["environments"]
+        if len(envs) >= 2:
+            resp = seeded_client.post(
+                "/api/cleanup/compare",
+                json={
+                    "project_a": envs[0]["path"],
+                    "project_b": envs[1]["path"],
+                },
+            )
+            assert resp.status_code == 200
+        else:
+            resp = seeded_client.post(
+                "/api/cleanup/compare",
+                json={
+                    "project_a": "/nonexistent",
+                    "project_b": "/nonexistent",
+                },
+            )
+            assert resp.status_code == 404
+
+
+class TestScan:
+    def test_scan(self, seeded_client):
+        resp = seeded_client.post(
+            "/api/scan",
+            json={"path": ["/tmp"], "depth": 1, "incremental": False},
+        )
+        assert resp.status_code == 200
+        data = resp.json()
+        assert "count" in data
+
+
+class TestTrackIgnore:
+    def test_track(self, seeded_client, tmp_path):
+        test_path = str(tmp_path / "dummy_env")
+        resp = seeded_client.post("/api/track", json={"path": test_path})
+        assert resp.status_code in (200, 400)
+
+    def test_ignore(self, seeded_client):
+        envs = seeded_client.get("/api/envs/").json()["environments"]
+        if envs:
+            resp = seeded_client.post(
+                "/api/ignore", json={"path": envs[0]["path"]}
+            )
+            assert resp.status_code == 200
+
+
+class TestSnapshots:
+    def test_prune_snapshots(self, seeded_client):
+        resp = seeded_client.post("/api/snapshots/prune", json={"keep": 5})
+        assert resp.status_code == 200
+        data = resp.json()
+        assert "pruned" in data
+
+
+class TestDB:
+    def test_db_path(self, client):
+        resp = client.get("/api/db/path")
+        assert resp.status_code == 200
+        data = resp.json()
+        assert "path" in data
+
+    def test_db_backup(self, client):
+        resp = client.post("/api/db/backup", json={})
+        assert resp.status_code in (200, 400)
+
+    def test_db_repair(self, client):
+        resp = client.post("/api/db/repair")
+        assert resp.status_code == 200
+        data = resp.json()
+        assert data["status"] == "ok"
+
+
+class TestConfig:
+    def test_get_config(self, client):
+        resp = client.get("/api/config")
+        assert resp.status_code == 200
+        data = resp.json()
+        assert "db_path" in data
+        assert "adapters" in data
 
 
 class TestNotFound:

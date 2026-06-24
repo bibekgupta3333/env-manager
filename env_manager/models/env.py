@@ -21,7 +21,7 @@ class EnvMetadata:
     size_bytes: int
     interpreter_path: str
     packages_count: int = 0
-    env_type: str = "local"
+    env_type: str = "project"
 
 
 @dataclass

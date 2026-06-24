@@ -25,7 +25,7 @@ def test_insert_and_get_env(db_path):
     env_id = repo.insert(
         project_id=pid,
         adapter="python.venv",
-        env_type="local",
+        env_type="project",
         path="/tmp/test-project/.venv",
         language="python",
         version="3.12.1",
@@ -54,7 +54,7 @@ def test_list_by_language(db_path):
     repo.insert(
         project_id=pid,
         adapter="python.venv",
-        env_type="local",
+        env_type="project",
         path="/tmp/p1/.venv",
         language="python",
         version="3.12",
@@ -62,7 +62,7 @@ def test_list_by_language(db_path):
     repo.insert(
         project_id=pid,
         adapter="node.nvm",
-        env_type="global",
+        env_type="runtime",
         path="/tmp/.nvm/v20",
         language="node",
         version="20.10",
@@ -85,7 +85,7 @@ def test_get_by_path(db_path):
     repo.insert(
         project_id=pid,
         adapter="python.venv",
-        env_type="local",
+        env_type="project",
         path="/tmp/specific/.venv",
         language="python",
         version="3.12",
@@ -108,7 +108,7 @@ def test_update_state(db_path):
     env_id = repo.insert(
         project_id=pid,
         adapter="python.venv",
-        env_type="local",
+        env_type="project",
         path="/tmp/p1/.venv",
         language="python",
         version="3.12",
@@ -129,7 +129,7 @@ def test_update_discovery_status(db_path):
     env_id = repo.insert(
         project_id=pid,
         adapter="python.venv",
-        env_type="local",
+        env_type="project",
         path="/tmp/p1/.venv",
         language="python",
         version="3.12",
@@ -151,7 +151,7 @@ def test_touch_and_update_health(db_path):
     env_id = repo.insert(
         project_id=pid,
         adapter="python.venv",
-        env_type="local",
+        env_type="project",
         path="/tmp/p1/.venv",
         language="python",
         version="3.12",
@@ -177,7 +177,7 @@ def test_delete_env(db_path):
     env_id = repo.insert(
         project_id=pid,
         adapter="python.venv",
-        env_type="local",
+        env_type="project",
         path="/tmp/p1/.venv",
         language="python",
         version="3.12",
@@ -197,7 +197,7 @@ def test_set_orphaned(db_path):
     env_id = repo.insert(
         project_id=pid,
         adapter="python.venv",
-        env_type="local",
+        env_type="project",
         path="/tmp/p1/.venv",
         language="python",
         version="3.12",

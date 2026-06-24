@@ -58,15 +58,22 @@ def _show_node() -> None:
     home = Path.home()
     managers = []
 
-    for mgr_name, subpath in [
-        ("nvm", ".nvm/versions/node"),
-        ("fnm", ".fnm/node-versions"),
-        ("volta", ".volta/tools/image/node"),
+    for mgr_name, subpaths in [
+        ("nvm", [".nvm/versions/node"]),
+        ("fnm", [".fnm/node-versions", ".local/share/fnm/node-versions"]),
+        ("volta", [".volta/tools/image/node"]),
     ]:
-        p = home / subpath
-        if p.exists():
-            vers = [d.name.lstrip("v") for d in p.iterdir() if d.is_dir()]
-            managers.append((mgr_name, vers))
+        for sp in subpaths:
+            p = home / sp
+            if p.exists():
+                vers = [
+                    d.name.lstrip("v")
+                    for d in p.iterdir()
+                    if d.is_dir() and not d.name.startswith(".")
+                ]
+                if vers:
+                    managers.append((mgr_name, vers))
+                    break
 
     asdf_node = home / ".asdf" / "installs" / "nodejs"
     if asdf_node.exists():

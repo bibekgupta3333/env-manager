@@ -93,11 +93,13 @@ class EnvironmentRepository:
         ).fetchall()
 
     def list_stale(self, days: int) -> list[sqlite3.Row]:
+        if days <= 0:
+            return []
         return self.conn.execute(
             """SELECT * FROM environments
-               WHERE management_state = 'ready'
+               WHERE management_state = ?
                AND last_used_at < datetime('now', ?)""",
-            (f"-{days} days",),
+            (ManagementState.READY.value, f"-{days} days"),
         ).fetchall()
 
     def list_orphaned(self) -> list[sqlite3.Row]:

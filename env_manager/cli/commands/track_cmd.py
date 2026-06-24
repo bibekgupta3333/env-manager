@@ -48,7 +48,7 @@ def track(
             if meta:
                 proj_dir = (
                     Path(resolved).parent
-                    if adapter.env_type == "local"
+                    if adapter.env_type == "project"
                     else Path(resolved)
                 )
                 proj_id, _ = proj_repo.get_or_create(

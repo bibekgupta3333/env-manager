@@ -20,16 +20,15 @@ class SnapshotRepository:
         tool_config: dict[str, Any] | None = None,
         notes: str = "",
     ) -> tuple[int, int]:
-        latest = self.get_latest_version(env_id)
-        version = (latest or 0) + 1
         cursor = self.conn.execute(
             """INSERT INTO snapshots
                (env_id, version, frozen_deps, raw_lockfile,
                 lockfile_format, tool_config, notes)
-               VALUES (?, ?, ?, ?, ?, ?, ?)""",
+               VALUES (?, COALESCE((SELECT MAX(version)
+                 FROM snapshots WHERE env_id = ?), 0) + 1, ?, ?, ?, ?, ?)""",
             (
                 env_id,
-                version,
+                env_id,
                 json.dumps(frozen_deps),
                 raw_lockfile,
                 lockfile_format,
@@ -39,6 +38,10 @@ class SnapshotRepository:
         )
         self.conn.commit()
         assert cursor.lastrowid is not None
+        version = self.conn.execute(
+            "SELECT version FROM snapshots WHERE rowid = ?",
+            (cursor.lastrowid,),
+        ).fetchone()[0]
         return cursor.lastrowid, version
 
     def get_latest_version(self, env_id: int) -> int | None:
@@ -77,6 +80,8 @@ class SnapshotRepository:
         ).fetchall()
 
     def prune(self, env_id: int, keep: int = 5) -> int:
+        if keep < 1:
+            return 0
         versions = self.conn.execute(
             "SELECT version FROM snapshots "
             "WHERE env_id = ? "

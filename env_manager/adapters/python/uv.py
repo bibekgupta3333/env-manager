@@ -17,7 +17,7 @@ class PythonUvAdapter(BaseAdapter):
     name = "python.uv"
     display_name = "Python (uv)"
     version = "1.0.0"
-    env_type = "local"
+    env_type = "project"
 
     def find_patterns(self) -> list[str]:
         return ["**/pyproject.toml", "**/.python-version"]
@@ -32,12 +32,15 @@ class PythonUvAdapter(BaseAdapter):
         if toml.exists():
             try:
                 content = toml.read_text()
-                if "uv" in content.lower():
+                if "[tool.uv]" in content:
                     is_uv = True
             except (OSError, UnicodeDecodeError):
                 pass
 
-        if not is_uv and not (ver_file.exists() and venv_dir.exists()):
+        if not is_uv:
+            return None
+
+        if not self._is_real_python_project(path):
             return None
 
         version = "unknown"
@@ -56,6 +59,60 @@ class PythonUvAdapter(BaseAdapter):
             ),
             interpreter_path="python3",
         )
+
+    def _is_real_python_project(self, path: Path) -> bool:
+        """Check if path is a real Python project (not test/docs)."""
+        dir_name = path.name.lower()
+        excluded_names = {
+            "test", "tests", "__tests__",
+            "types", "typings",
+            "docs", "doc", "documentation",
+            "scripts", "tools", "dev-tools",
+            "config", "configs", "configuration",
+            "infra", "infrastructure",
+            "examples", "demo", "demos",
+            "fixtures", "mocks",
+            "lib", "libs", "library",
+        }
+        if (
+            dir_name in excluded_names
+            or dir_name.startswith(".")
+            or "-test" in dir_name
+            or "_test" in dir_name
+            or "-doc" in dir_name
+            or "_doc" in dir_name
+            or "-types" in dir_name
+            or "test-" in dir_name
+            or "doc-" in dir_name
+        ):
+            return False
+
+        has_source_code = False
+        try:
+            for entry in path.iterdir():
+                if entry.is_file() and entry.suffix == ".py":
+                    has_source_code = True
+                    break
+            if not has_source_code and (path / "src").is_dir():
+                for entry in (path / "src").iterdir():
+                    if entry.is_file() and entry.suffix == ".py":
+                        has_source_code = True
+                        break
+        except (OSError, PermissionError):
+            pass
+        if not has_source_code:
+            return False
+
+        indicators = 0
+        if (path / ".git").exists():
+            # .git is a strong indicator: project is under version control
+            indicators += 2
+        if (path / "tests").is_dir() or (path / "test").is_dir():
+            indicators += 1
+        if (path / "README.md").exists() or (path / "README.rst").exists():
+            indicators += 1
+
+        return indicators >= 2
 
     def inspect(self, path: Path) -> EnvMetadata:
         venv = path if path.name == ".venv" else path / ".venv"
@@ -82,7 +139,10 @@ class PythonUvAdapter(BaseAdapter):
         venv = path if path.name == ".venv" else path / ".venv"
         if venv.exists() and (venv / "bin" / "python").exists():
             return HealthResult(status="healthy")
-        return HealthResult(status="healthy")
+        return HealthResult(
+            status="broken",
+            errors=[".venv not found or missing python binary"],
+        )
 
     def _read_venv_version(self, venv: Path) -> str:
         cfg = venv / "pyvenv.cfg"

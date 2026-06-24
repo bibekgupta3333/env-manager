@@ -19,7 +19,7 @@ def _setup(db_path):
     eid = env_repo.insert(
         project_id=pid,
         adapter="python.venv",
-        env_type="local",
+        env_type="project",
         path="/tmp/test/.venv",
         language="python",
         version="3.12",

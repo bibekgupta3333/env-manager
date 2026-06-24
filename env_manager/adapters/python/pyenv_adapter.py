@@ -11,14 +11,14 @@ from env_manager.models.env import (
     HealthResult,
     Package,
 )
-from env_manager.platform import find_vm_path
+from env_manager.platform import find_vm_path, python_bin_dir, python_exe_name
 
 
 class PythonPyenvAdapter(BaseAdapter):
     name = "python.pyenv"
     display_name = "Python (pyenv)"
     version = "1.0.0"
-    env_type = "global"
+    env_type = "runtime"
 
     def find_patterns(self) -> list[str]:
         pyenv_root = (
@@ -38,9 +38,9 @@ class PythonPyenvAdapter(BaseAdapter):
         if not pyenv_root.exists():
             return None
         try:
-            if path.parent == pyenv_root or path.parent.parent == pyenv_root:
+            if str(path).startswith(str(pyenv_root)):
                 version = path.name
-                python_bin = path / "bin" / "python"
+                python_bin = path / python_bin_dir(path) / python_exe_name()
                 return EnvMetadata(
                     language="python",
                     tool="pyenv",
@@ -50,21 +50,24 @@ class PythonPyenvAdapter(BaseAdapter):
                     interpreter_path=(
                         str(python_bin) if python_bin.exists() else "python3"
                     ),
-                    env_type="global",
+                    env_type="runtime",
                 )
         except OSError:
             pass
         return None
 
     def inspect(self, path: Path) -> EnvMetadata:
+        python_bin = path / python_bin_dir(path) / python_exe_name()
         return EnvMetadata(
             language="python",
             tool="pyenv",
             version=path.name,
             path=str(path),
             size_bytes=self._du(path),
-            interpreter_path="python3",
-            env_type="global",
+            interpreter_path=(
+                str(python_bin) if python_bin.exists() else "python3"
+            ),
+            env_type="runtime",
         )
 
     def get_packages(self, path: Path) -> list[Package]:
@@ -76,7 +79,7 @@ class PythonPyenvAdapter(BaseAdapter):
         )
 
     def check_health(self, path: Path) -> HealthResult:
-        python_bin = path / "bin" / "python"
+        python_bin = path / python_bin_dir(path) / python_exe_name()
         if python_bin.exists():
             return HealthResult(status="healthy")
         return HealthResult(

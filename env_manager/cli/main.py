@@ -17,6 +17,8 @@ from env_manager.cli.commands import (
     list_cmd,
     pin_cmd,
     plugin,
+    projects_cmd,
+    runtimes_cmd,
     scan,
     snapshots_cmd,
     track_cmd,
@@ -68,6 +70,8 @@ def _main_callback(
 
 app.add_typer(scan.app, name="scan")
 app.add_typer(list_cmd.app, name="list")
+app.add_typer(runtimes_cmd.app, name="runtimes")
+app.add_typer(projects_cmd.app, name="projects")
 app.command(name="info")(info_cmd.info)
 app.add_typer(plugin.app, name="plugins")
 app.add_typer(config.app, name="config")

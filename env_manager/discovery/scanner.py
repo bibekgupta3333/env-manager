@@ -10,7 +10,7 @@ from typing import Any
 from env_manager.adapters.base import BaseAdapter
 from env_manager.models.env import EnvMetadata
 from env_manager.models.states import DiscoveryStatus, ManagementState
-from env_manager.platform import system_excludes
+from env_manager.platform import is_vm_path, system_excludes
 from env_manager.storage.repo_activity import ActivityRepository
 from env_manager.storage.repo_env import EnvironmentRepository
 from env_manager.storage.repo_project import ProjectRepository
@@ -31,6 +31,10 @@ DEFAULT_EXCLUDES: set[str] = {
     # Package manager caches (auto-managed, not user envs)
     "pre-commit",
     "uv",
+    # Build artifacts (not user envs)
+    "target",
+    "vendor",
+    ".opencode",
 }
 
 # System paths determined at runtime per platform
@@ -60,7 +64,7 @@ class Scanner:
         if incremental:
             last_scan = self._get_last_scan_time()
 
-        dirs_scanned = 0
+        dirs_scanned = [0]
         results: list[EnvMetadata] = []
         self._walk(root, depth, results, last_scan, on_progress, dirs_scanned)
 
@@ -88,21 +92,32 @@ class Scanner:
 
     @staticmethod
     def _project_name(env_path: Path, env_type: str) -> str:
-        if env_type == "local":
-            parent = env_path.parent
-            name = parent.name.lower()
-            if name.startswith("pytest") or name.startswith("tmp"):
-                name = parent.parent.name
+        if env_type == "project":
+            is_venv = (
+                env_path.name in (".venv", "venv")
+                or (env_path / "pyvenv.cfg").exists()
+            )
+            if is_venv:
+                name = env_path.parent.name.lower()
             else:
-                name = parent.name
+                name = env_path.name.lower()
+            if name.startswith("pytest") or name.startswith("tmp"):
+                name = env_path.parent.parent.name.lower()
         else:
             name = env_path.name
-        return name.lstrip(".")
+        return name[1:] if name.startswith(".") else name
 
     def _persist(self, meta: EnvMetadata) -> None:
         """Store discovered environment in the database."""
         env_path = Path(meta.path).resolve()
-        proj_dir = env_path.parent if meta.env_type == "local" else env_path
+        if meta.env_type == "project":
+            is_venv = (
+                env_path.name in (".venv", "venv")
+                or (env_path / "pyvenv.cfg").exists()
+            )
+            proj_dir = env_path.parent if is_venv else env_path
+        else:
+            proj_dir = env_path
         proj_dir = proj_dir.resolve()
         proj_name = self._project_name(env_path, meta.env_type)
 
@@ -144,12 +159,6 @@ class Scanner:
 
         metadata: dict[str, Any] = {"interpreter_path": meta.interpreter_path}
 
-        parent_venv_path = proj_dir.parent / ".venv"
-        if parent_venv_path.exists():
-            parent_env = self.env_repo.get_by_path(str(parent_venv_path))
-            if parent_env:
-                metadata["parent_env_id"] = parent_env["id"]
-
         adapter_name = f"{meta.language}.{meta.tool}"
         new_id = self.env_repo.insert(
             project_id=proj_id,
@@ -179,7 +188,9 @@ class Scanner:
     ) -> None:
         """Check for nested .venv: if the parent directory also has a
         .venv, record the parent env id in metadata."""
-        parent_venv_path = proj_dir.parent / ".venv"
+        if env_path.parent == env_path:  # root guard
+            return
+        parent_venv_path = env_path.parent / ".venv"
         if parent_venv_path.exists():
             parent_env = self.env_repo.get_by_path(str(parent_venv_path))
             if parent_env:
@@ -244,21 +255,20 @@ class Scanner:
         results: list[EnvMetadata],
         last_scan: str | None = None,
         on_progress: Callable[[int, int], None] | None = None,
-        dirs_scanned: int = 0,
+        dirs_scanned: list[int] | None = None,
     ) -> None:
-        if remaining_depth <= 0:
-            return
-
-        dirs_scanned += 1
-        if on_progress and dirs_scanned % 50 == 0:
-            on_progress(dirs_scanned, len(results))
-
         if directory.name in DEFAULT_EXCLUDES:
             return
 
         path_str = str(directory)
         if any(path_str.startswith(p) for p in SYSTEM_PREFIXES):
             return
+
+        if dirs_scanned is None:
+            dirs_scanned = [0]
+        dirs_scanned[0] += 1
+        if on_progress and dirs_scanned[0] % 50 == 0:
+            on_progress(dirs_scanned[0], len(results))
 
         # Incremental: skip directories older than last scan
         if last_scan:
@@ -275,14 +285,19 @@ class Scanner:
             try:
                 meta = adapter.detect(directory)
                 if meta is not None:
+                    if is_vm_path(meta.path):
+                        meta.env_type = "runtime"
                     results.append(meta)
                     break
             except OSError:
                 continue
 
+        if remaining_depth <= 0:
+            return
+
         try:
             for entry in directory.iterdir():
-                if entry.is_dir() and not entry.is_symlink():
+                if entry.is_dir():
                     self._walk(
                         entry,
                         remaining_depth - 1,

@@ -1,20 +1,30 @@
 import { useState, useCallback, useEffect, useRef } from 'react';
 import Sidebar from './components/Sidebar';
 import Dashboard from './components/Dashboard';
-import EnvList from './components/EnvList';
+import ProjectsView from './components/ProjectsView';
+import RuntimesView from './components/RuntimesView';
 import DoctorView from './components/DoctorView';
 import CleanupView from './components/CleanupView';
 import SnapshotsView from './components/SnapshotsView';
+import LifecycleView from './components/LifecycleView';
+import DatabaseView from './components/DatabaseView';
+import ConfigView from './components/ConfigView';
+import VersionsView from './components/VersionsView';
 import { createToast } from './components/Toast';
 import { connectWS } from './api';
 import './App.css';
 
 const TABS = {
   dashboard: Dashboard,
-  environments: EnvList,
+  runtimes: RuntimesView,
+  projects: ProjectsView,
+  lifecycle: LifecycleView,
   doctor: DoctorView,
   cleanup: CleanupView,
   snapshots: SnapshotsView,
+  database: DatabaseView,
+  config: ConfigView,
+  versions: VersionsView,
 };
 
 export default function App() {

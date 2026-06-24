@@ -1,6 +1,7 @@
 """Cross-platform utilities — paths, binaries, and shell helpers per OS."""
 
 import os
+import shutil
 import sys
 from pathlib import Path
 
@@ -97,7 +98,12 @@ def get_activate_cmd(venv_path: Path, language: str) -> str | None:
 
 def system_excludes() -> list[str]:
     """Paths to skip during scanning, per platform."""
-    common = ["/proc", "/sys", "/dev"]
+    common = [
+        "/proc",
+        "/sys",
+        "/dev",
+        str(Path.home() / ".local" / "state" / "fnm_multishells"),
+    ]
     if is_macos():
         return common + [
             "/System",
@@ -203,3 +209,52 @@ def find_vm_path(vm_name: str, *subpath: str) -> Path | None:
         if full.exists():
             return full
     return None
+
+
+def is_vm_path(path: str | Path) -> bool:
+    """Check if a path is inside any known VM installation directory."""
+    p = str(Path(path).expanduser().resolve())
+    all_paths = version_manager_paths()
+    for candidates in all_paths.values():
+        for base in candidates:
+            if not base:
+                continue
+            resolved_base = str(Path(base).expanduser().resolve())
+            if p.startswith(resolved_base + os.sep) or p == resolved_base:
+                return True
+    # Catch multi-user paths (e.g. /home/otheruser/.pyenv/...)
+    vm_dirnames = {
+        ".pyenv",
+        ".nvm",
+        ".fnm",
+        ".volta",
+        ".rbenv",
+        ".rvm",
+        ".asdf",
+        ".rustup",
+        ".goenv",
+        ".downloads",
+        "anaconda3",
+        "miniconda3",
+        "miniforge3",
+        "mambaforge",
+    }
+    return any(part in vm_dirnames for part in Path(p).parts)
+
+
+def safe_rmtree(path: Path) -> None:
+    """Remove a directory tree with safety guards against destructive deletes."""  # noqa: E501
+    resolved = path.resolve()
+
+    if resolved == Path("/"):
+        raise ValueError("Refusing to delete root filesystem")
+
+    home = Path.home().resolve()
+    if resolved == home or home.is_relative_to(resolved):
+        raise ValueError(f"Refusing to delete system path: {path}")
+
+    for exclude in system_excludes():
+        if str(resolved).startswith(exclude):
+            raise ValueError(f"Refusing to delete system path: {path}")
+
+    shutil.rmtree(path, ignore_errors=True)

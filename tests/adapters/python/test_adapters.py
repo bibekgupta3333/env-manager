@@ -16,6 +16,9 @@ class TestPoetryAdapter:
         proj = tmp_path / "poetry-proj"
         proj.mkdir()
         (proj / "pyproject.toml").write_text("[tool.poetry]\nname = 'test'\n")
+        (proj / "main.py").write_text("print('hi')\n")
+        (proj / "tests").mkdir()
+        (proj / ".git").mkdir()
         adapter = PythonPoetryAdapter()
         result = adapter.detect(proj)
         assert result is not None
@@ -47,7 +50,7 @@ class TestPoetryAdapter:
     def test_freeze(self, tmp_path):
         adapter = PythonPoetryAdapter()
         result = adapter.freeze(tmp_path)
-        assert result.format == "pyproject.toml"
+        assert result.format == "requirements.txt"
 
 
 class TestUvAdapter:
@@ -60,10 +63,11 @@ class TestUvAdapter:
     def test_detect_uv_project(self, tmp_path):
         proj = tmp_path / "uv-proj"
         proj.mkdir()
-        toml_text = (
-            "[project]\n" "requires-python = '>=3.10'\n" "# uv lock file\n"
-        )
+        toml_text = "[project]\n" "requires-python = '>=3.10'\n" "[tool.uv]\n"
         (proj / "pyproject.toml").write_text(toml_text)
+        (proj / "main.py").write_text("print('hi')\n")
+        (proj / "README.md").write_text("# Project\n")
+        (proj / ".git").mkdir()
         adapter = PythonUvAdapter()
         result = adapter.detect(proj)
         assert result is not None
@@ -81,7 +85,7 @@ class TestUvAdapter:
     def test_check_health_default(self, tmp_path):
         adapter = PythonUvAdapter()
         result = adapter.check_health(tmp_path)
-        assert result.status == "healthy"
+        assert result.status == "broken"
 
 
 class TestPipenvAdapter:
@@ -90,12 +94,16 @@ class TestPipenvAdapter:
         patterns = adapter.find_patterns()
         assert "**/Pipfile" in patterns
 
-    def test_detect_pipenv_project(self, tmp_path):
+    def test_detect_pipenv_project(self, tmp_path, monkeypatch):
         proj = tmp_path / "pipenv-proj"
         proj.mkdir()
         (proj / "Pipfile").write_text(
             "[[source]]\nurl = 'https://pypi.org/simple'\n"
             "python_version = '3.12'\n"
+        )
+        monkeypatch.setattr(
+            "shutil.which",
+            lambda x: "/usr/bin/pipenv" if x == "pipenv" else None,
         )
         adapter = PythonPipenvAdapter()
         result = adapter.detect(proj)

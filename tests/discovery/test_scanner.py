@@ -9,7 +9,7 @@ class FakePythonAdapter(BaseAdapter):
     name = "python.fake"
     display_name = "Fake Python"
     version = "0.1"
-    env_type = "local"
+    env_type = "project"
 
     def find_patterns(self):
         return ["**/.fake-python"]
@@ -53,7 +53,7 @@ class FakeNodeAdapter(BaseAdapter):
     name = "node.fake"
     display_name = "Fake Node"
     version = "0.1"
-    env_type = "global"
+    env_type = "runtime"
 
     def find_patterns(self):
         return ["**/.fake-node"]
@@ -67,7 +67,7 @@ class FakeNodeAdapter(BaseAdapter):
                 path=str(path),
                 size_bytes=200,
                 interpreter_path="/bin/fake-node",
-                env_type="global",
+                env_type="runtime",
             )
         return None
 
@@ -80,7 +80,7 @@ class FakeNodeAdapter(BaseAdapter):
             size_bytes=200,
             interpreter_path="/bin/fake-node",
             packages_count=0,
-            env_type="global",
+            env_type="runtime",
         )
 
     def get_packages(self, path):

@@ -58,15 +58,11 @@ class TestCleanup:
     def test_cleanup_compare(self, runner, tmp_path, monkeypatch):
         venv_a = tmp_path / "proj_a" / ".venv"
         venv_a.parent.mkdir(parents=True, exist_ok=True)
-        subprocess.run(
-            [sys.executable, "-m", "venv", str(venv_a)], check=True
-        )
+        subprocess.run([sys.executable, "-m", "venv", str(venv_a)], check=True)
 
         venv_b = tmp_path / "proj_b" / ".venv"
         venv_b.parent.mkdir(parents=True, exist_ok=True)
-        subprocess.run(
-            [sys.executable, "-m", "venv", str(venv_b)], check=True
-        )
+        subprocess.run([sys.executable, "-m", "venv", str(venv_b)], check=True)
 
         from env_manager.cli.commands import scan as scan_mod
 

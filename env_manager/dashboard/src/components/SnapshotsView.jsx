@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { fetchSnapshots } from '../api';
+import { fetchSnapshots, restoreSnapshot, pruneSnapshots } from '../api';
 import EmptyState from './EmptyState';
 import { createToast } from './Toast';
 
@@ -59,12 +59,24 @@ export default function SnapshotsView() {
 
   useEffect(() => { load(); }, []);
 
-  const handleRestore = (snap) => {
-    createToast(`Restore not available via dashboard. Use: envs snapshots restore ${snap.id}`, 'info');
+  const handleRestore = async (snap) => {
+    try {
+      await restoreSnapshot(snap.id);
+      createToast(`Snapshot restored`, 'success');
+      load();
+    } catch {
+      createToast('Restore failed', 'error');
+    }
   };
 
-  const handlePrune = () => {
-    createToast('Use: envs snapshots prune --confirm', 'info');
+  const handlePrune = async () => {
+    try {
+      const result = await pruneSnapshots();
+      createToast(`Pruned ${result.pruned} old snapshots`, 'success');
+      load();
+    } catch {
+      createToast('Prune failed', 'error');
+    }
   };
 
   const pkgCount = (snap) => {

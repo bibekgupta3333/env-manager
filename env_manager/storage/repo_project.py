@@ -37,7 +37,13 @@ class ProjectRepository:
         existing = self.get_by_path(path)
         if existing:
             return existing["id"], False
-        return self.insert(name=name, path=path), True
+        try:
+            return self.insert(name=name, path=path), True
+        except sqlite3.IntegrityError:
+            existing = self.get_by_path(path)
+            if existing:
+                return existing["id"], False
+            raise
 
     def list_all(self) -> list[sqlite3.Row]:
         return self.conn.execute(

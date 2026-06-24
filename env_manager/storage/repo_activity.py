@@ -34,6 +34,22 @@ class ActivityRepository:
             (limit,),
         ).fetchall()
 
+    def list_all(self, limit: int = 100) -> list[sqlite3.Row]:
+        return self.conn.execute(
+            "SELECT * FROM activity_log ORDER BY timestamp DESC LIMIT ?",
+            (limit,),
+        ).fetchall()
+
+    def list_by_project(
+        self, project_id: int, limit: int = 50
+    ) -> list[sqlite3.Row]:
+        return self.conn.execute(
+            "SELECT * FROM activity_log "
+            "WHERE project_id = ? "
+            "ORDER BY timestamp DESC LIMIT ?",
+            (project_id, limit),
+        ).fetchall()
+
     def list_by_env(self, env_id: int, limit: int = 50) -> list[sqlite3.Row]:
         return self.conn.execute(
             "SELECT * FROM activity_log "
