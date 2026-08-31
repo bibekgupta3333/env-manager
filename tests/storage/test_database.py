@@ -2,7 +2,11 @@
 
 import sqlite3
 
-from env_manager.storage.database import close_connection, get_connection, init_db
+from env_manager.storage.database import (
+    close_connection,
+    get_connection,
+    init_db,
+)
 
 
 def test_init_db_creates_all_tables(db_path):
@@ -10,7 +14,9 @@ def test_init_db_creates_all_tables(db_path):
 
     conn = sqlite3.connect(db_path)
     cursor = conn.cursor()
-    cursor.execute("SELECT name FROM sqlite_master WHERE type='table' ORDER BY name")
+    cursor.execute(
+        "SELECT name FROM sqlite_master WHERE type='table' ORDER BY name"
+    )
     tables = [row[0] for row in cursor.fetchall()]
 
     assert "projects" in tables
@@ -56,7 +62,9 @@ def test_init_db_is_idempotent(db_path):
     init_db(db_path)
     init_db(db_path)  # Second call should not raise
     conn = sqlite3.connect(db_path)
-    cursor = conn.execute("SELECT name FROM sqlite_master WHERE type='table' ORDER BY name")
+    cursor = conn.execute(
+        "SELECT name FROM sqlite_master WHERE type='table' ORDER BY name"
+    )
     tables = [row[0] for row in cursor.fetchall()]
     assert "environments" in tables
     conn.close()

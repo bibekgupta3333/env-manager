@@ -3,13 +3,17 @@
 from env_manager.cli.commands import (
     cleanup_cmd,
     config,
+    daemon_cmd,
+    db_cmd,
     doctor_cmd,
+    hook_cmd,
     info,
     lifecycle,
     list_cmd,
     plugin,
     scan,
     snapshots_cmd,
+    versions_cmd,
 )
 
 __all__ = [
@@ -22,4 +26,8 @@ __all__ = [
     "doctor_cmd",
     "snapshots_cmd",
     "cleanup_cmd",
+    "daemon_cmd",
+    "hook_cmd",
+    "db_cmd",
+    "versions_cmd",
 ]

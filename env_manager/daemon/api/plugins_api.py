@@ -1,6 +1,6 @@
 """REST API — plugin endpoints."""
 
-from fastapi import APIRouter
+from fastapi import APIRouter, HTTPException
 
 from env_manager.adapters.registry import AdapterRegistry
 from env_manager.cli.db_utils import get_db_path
@@ -23,7 +23,7 @@ async def enable_plugin(name: str):
     registry = AdapterRegistry(conn)
     if registry.enable(name):
         return {"status": "enabled", "name": name}
-    raise __import__("fastapi").HTTPException(status_code=404, detail="Adapter not found")
+    raise HTTPException(status_code=404, detail="Adapter not found")
 
 
 @router.post("/{name}/disable")
@@ -32,4 +32,4 @@ async def disable_plugin(name: str):
     registry = AdapterRegistry(conn)
     if registry.disable(name):
         return {"status": "disabled", "name": name}
-    raise __import__("fastapi").HTTPException(status_code=404, detail="Adapter not found")
+    raise HTTPException(status_code=404, detail="Adapter not found")

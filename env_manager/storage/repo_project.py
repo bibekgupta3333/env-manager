@@ -1,16 +1,18 @@
 """Repository for project CRUD operations."""
 
-# mypy: disable_error_code = no-any-return
+from __future__ import annotations
 
 import json
 import sqlite3
 
 
 class ProjectRepository:
-    def __init__(self, conn: sqlite3.Connection):
+    def __init__(self, conn: sqlite3.Connection) -> None:
         self.conn = conn
 
-    def insert(self, name: str, path: str, tags: list[str] | None = None) -> int:
+    def insert(
+        self, name: str, path: str, tags: list[str] | None = None
+    ) -> int:
         cursor = self.conn.execute(
             "INSERT INTO projects (name, path, tags) VALUES (?, ?, ?)",
             (name, path, json.dumps(tags or [])),
@@ -20,20 +22,28 @@ class ProjectRepository:
         return cursor.lastrowid
 
     def get_by_id(self, project_id: int) -> sqlite3.Row | None:
-        return self.conn.execute(
+        row = self.conn.execute(
             "SELECT * FROM projects WHERE id = ?", (project_id,)
         ).fetchone()
+        return row  # type: ignore[no-any-return]
 
     def get_by_path(self, path: str) -> sqlite3.Row | None:
-        return self.conn.execute(
+        row = self.conn.execute(
             "SELECT * FROM projects WHERE path = ?", (path,)
         ).fetchone()
+        return row  # type: ignore[no-any-return]
 
     def get_or_create(self, name: str, path: str) -> tuple[int, bool]:
         existing = self.get_by_path(path)
         if existing:
             return existing["id"], False
-        return self.insert(name=name, path=path), True
+        try:
+            return self.insert(name=name, path=path), True
+        except sqlite3.IntegrityError:
+            existing = self.get_by_path(path)
+            if existing:
+                return existing["id"], False
+            raise
 
     def list_all(self) -> list[sqlite3.Row]:
         return self.conn.execute(
@@ -42,7 +52,9 @@ class ProjectRepository:
 
     def set_pinned(self, project_id: int, pinned: bool) -> None:
         self.conn.execute(
-            "UPDATE projects SET is_pinned = ?, updated_at = datetime('now') WHERE id = ?",
+            "UPDATE projects "
+            "SET is_pinned = ?, updated_at = datetime('now') "
+            "WHERE id = ?",
             (int(pinned), project_id),
         )
         self.conn.commit()

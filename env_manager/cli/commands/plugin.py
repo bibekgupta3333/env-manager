@@ -28,7 +28,9 @@ def list_plugins() -> None:
 
 
 @app.command("enable")
-def enable_plugin(name: str = typer.Argument(..., help="Adapter name")) -> None:
+def enable_plugin(
+    name: str = typer.Argument(..., help="Adapter name")
+) -> None:
     """Enable a language adapter."""
     ensure_db_dir()
     db_path = get_db_path()
@@ -39,7 +41,7 @@ def enable_plugin(name: str = typer.Argument(..., help="Adapter name")) -> None:
     if registry.enable(name):
         typer.echo(f"Enabled: {name}")
     else:
-        typer.echo(f"Adapter not found: {name}")
+        typer.echo(f"adapter not found: {name}")
         conn.close()
         raise typer.Exit(1)
 
@@ -47,7 +49,9 @@ def enable_plugin(name: str = typer.Argument(..., help="Adapter name")) -> None:
 
 
 @app.command("disable")
-def disable_plugin(name: str = typer.Argument(..., help="Adapter name")) -> None:
+def disable_plugin(
+    name: str = typer.Argument(..., help="Adapter name")
+) -> None:
     """Disable a language adapter. Its environments won't be scanned."""
     ensure_db_dir()
     db_path = get_db_path()
@@ -58,7 +62,7 @@ def disable_plugin(name: str = typer.Argument(..., help="Adapter name")) -> None
     if registry.disable(name):
         typer.echo(f"Disabled: {name}")
     else:
-        typer.echo(f"Adapter not found or already disabled: {name}")
+        typer.echo(f"adapter not found or already disabled: {name}")
         conn.close()
         raise typer.Exit(1)
 

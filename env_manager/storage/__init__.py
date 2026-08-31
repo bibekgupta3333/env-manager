@@ -1,4 +1,8 @@
-from env_manager.storage.database import close_connection, get_connection, init_db
+from env_manager.storage.database import (
+    close_connection,
+    get_connection,
+    init_db,
+)
 from env_manager.storage.repo_activity import ActivityRepository
 from env_manager.storage.repo_env import EnvironmentRepository
 from env_manager.storage.repo_project import ProjectRepository

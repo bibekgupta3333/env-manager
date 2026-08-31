@@ -1,0 +1,181 @@
+name: Release
+
+on:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: write
+  id-token: write
+  attestations: write
+
+jobs:
+  test:
+    name: Test before publish
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install & test
+        run: |
+          pip install -r requirements.txt
+          pip install -r requirements-dev.txt
+          pip install -e .
+          ruff check env_manager/ tests/
+          mypy env_manager/
+          pytest tests/ -v --tb=short
+
+  pypi:
+    name: Publish to PyPI
+    needs: test
+    runs-on: ubuntu-latest
+    environment:
+      name: pypi
+      url: https://pypi.org/p/env-manager
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Build package
+        run: |
+          pip install build
+          python -m build
+
+      - name: Publish to PyPI
+        uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          packages-dir: dist/
+
+  binaries:
+    name: Build binaries (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+            artifact: envs-linux
+            binary: envs
+          - os: macos-latest
+            artifact: envs-macos
+            binary: envs
+          - os: windows-latest
+            artifact: envs-windows
+            binary: envs.exe
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install dependencies
+        run: |
+          pip install -r requirements.txt
+          pip install pyinstaller
+          pip install -e .
+
+      - name: Build binary
+        run: pyinstaller env-manager.spec --clean --noconfirm
+
+      - name: Build Windows installer (NSIS)
+        if: runner.os == 'Windows'
+        run: |
+          choco install nsis -y --no-progress
+          copy dist\envs-dist\envs.exe packaging\windows\
+          makensis packaging\windows\envs.nsi
+
+      - name: Rename binary
+        shell: bash
+        run: |
+          mkdir -p release
+          cp dist/envs-dist/${{ matrix.binary }} release/${{ matrix.binary }}
+          cd release && tar -czf ../${{ matrix.artifact }}.tar.gz ${{ matrix.binary }}
+
+      - name: Upload binary artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.artifact }}
+          path: ${{ matrix.artifact }}.tar.gz
+
+      - name: Upload Windows installer artifact
+        if: runner.os == 'Windows'
+        uses: actions/upload-artifact@v4
+        with:
+          name: envs-setup
+          path: envs-setup.exe
+
+  github-release:
+    name: Create GitHub Release
+    needs: [pypi, binaries]
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Download all binaries
+        uses: actions/download-artifact@v4
+        with:
+          path: binaries/
+
+      - name: Generate changelog
+        id: changelog
+        run: |
+          TAG=${GITHUB_REF#refs/tags/}
+          PREV_TAG=$(git describe --tags --abbrev=0 HEAD^ 2>/dev/null || echo "")
+          if [ -n "$PREV_TAG" ]; then
+            echo "## Changes since $PREV_TAG" > CHANGES.md
+            git log --oneline --no-merges "$PREV_TAG..HEAD" >> CHANGES.md
+          else
+            echo "## Initial release" > CHANGES.md
+            git log --oneline --no-merges >> CHANGES.md
+          fi
+          echo "changelog<<EOF" >> $GITHUB_OUTPUT
+          cat CHANGES.md >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
+
+      - name: Compute SHA256 for macOS binary
+        run: |
+          SHA256=$(shasum -a 256 binaries/envs-macos/envs-macos.tar.gz | awk '{print $1}')
+          echo "macos_sha256=$SHA256" >> $GITHUB_OUTPUT
+          echo "macOS SHA256: $SHA256"
+        id: sha256
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v2
+        with:
+          name: ${{ github.ref_name }}
+          body: ${{ steps.changelog.outputs.changelog }}
+          draft: false
+          prerelease: ${{ contains(github.ref_name, 'rc') || contains(github.ref_name, 'beta') || contains(github.ref_name, 'alpha') }}
+          files: |
+            binaries/**/*.tar.gz
+
+      # After release, update the Homebrew formula SHA256:
+      # The computed SHA256 is printed above. Copy it into:
+      #   packaging/homebrew/env-manager.rb
+      # Update the sha256 field and the version/url if the tag changed.
+      # Then commit and push the formula to the homebrew tap repo.
+      - name: Print Homebrew formula update instructions
+        run: |
+          echo "============================================"
+          echo "  Homebrew formula update instructions"
+          echo "============================================"
+          echo ""
+          echo "  1. Update packaging/homebrew/env-manager.rb:"
+          echo "     - version: \"${{ github.ref_name }}\""
+          echo "     - url: https://github.com/bibekgupta3333/env-manager/releases/download/${{ github.ref_name }}/envs-macos.tar.gz"
+          echo "     - sha256: \"${{ steps.sha256.outputs.macos_sha256 }}\""
+          echo ""
+          echo "  2. Commit and push to the homebrew tap repo"
+          echo "============================================"
+            binaries/**/envs-setup.exe

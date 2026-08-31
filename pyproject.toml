@@ -5,7 +5,25 @@ build-backend = "hatchling.build"
 [project]
 name = "env-manager"
 version = "0.1.0"
-description = "Cross-language virtual environment manager"
+description = "Cross-language virtual environment manager — discover, manage, health-check, snapshot, and clean up Python, Node, Ruby, Go, and Rust environments"
+readme = "README.md"
+license = {text = "MIT"}
+authors = [
+    {name = "env-manager contributors"}
+]
+keywords = ["virtualenv", "venv", "nvm", "rbenv", "environment", "dev-tools", "cli"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Software Development :: Build Tools",
+    "Topic :: System :: Systems Administration",
+]
 requires-python = ">=3.10"
 dependencies = [
     "fastapi>=0.115.0",
@@ -25,26 +43,35 @@ dev = [
     "mypy>=1.10",
 ]
 
+[project.urls]
+Homepage = "https://github.com/bibekgupta3333/env-manager"
+Repository = "https://github.com/bibekgupta3333/env-manager"
+Issues = "https://github.com/bibekgupta3333/env-manager/issues"
+
 [project.scripts]
 envs = "env_manager.cli.main:app"
 
 [tool.ruff]
 target-version = "py310"
-line-length = 100
+line-length = 79
+
+[tool.black]
+line-length = 79
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "N", "W", "UP", "B", "C4", "SIM"]
 ignore = ["B008", "B904"]
 
 [tool.ruff.lint.per-file-ignores]
-"env_manager/cli/commands/lifecycle.py" = ["E501"]
-"env_manager/cli/commands/doctor_cmd.py" = ["E501"]
-"env_manager/cli/commands/cleanup_cmd.py" = ["E501"]
-"env_manager/cli/main.py" = ["E501"]
-"env_manager/daemon/*.py" = ["E501"]
-"env_manager/daemon/api/*.py" = ["E501"]
-"env_manager/adapters/node/*.py" = ["E501"]
-"env_manager/adapters/rust/*.py" = ["E501"]
+"env_manager/**/hook_cmd.py" = ["E501"]
+"env_manager/**/asdf/*.py" = ["E501"]
+"env_manager/**/versions_cmd.py" = ["E501"]
+"env_manager/**/pin_cmd.py" = ["E501"]
+"env_manager/**/track_cmd.py" = ["E501"]
+"env_manager/**/list_cmd.py" = ["E501"]
+"env_manager/**/formatters.py" = ["E501"]
+"tests/**/test_lifecycle.py" = ["E501"]
+"tests/**/test_api.py" = ["E501"]
 
 [tool.mypy]
 python_version = "3.10"
@@ -55,9 +82,8 @@ module = ["apscheduler.*", "apscheduler.schedulers.background"]
 ignore_missing_imports = true
 
 [[tool.mypy.overrides]]
-module = ["env_manager.daemon.*", "env_manager.daemon.api.*", "env_manager.cli.commands.lifecycle", "env_manager.cli.commands.snapshots_cmd", "env_manager.cli.commands.cleanup_cmd", "env_manager.cli.commands.doctor_cmd"]
-disable_error_code = ["no-untyped-def", "attr-defined"]
+module = ["env_manager.daemon.*", "env_manager.daemon.api.*", "env_manager.cli.commands.lifecycle", "env_manager.cli.commands.snapshots_cmd", "env_manager.cli.commands.cleanup_cmd", "env_manager.cli.commands.doctor_cmd", "env_manager.cli.commands.hook_cmd", "env_manager.cli.commands.db_cmd", "env_manager.cli.commands.scan", "env_manager.cli.resolve"]
+disable_error_code = ["no-untyped-def", "attr-defined", "no-untyped-call"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
-asyncio_mode = "auto"

@@ -6,6 +6,7 @@ from contextlib import suppress
 from typing import Any
 
 from fastapi import APIRouter, WebSocket
+from starlette.websockets import WebSocketDisconnect
 
 router = APIRouter(prefix="/ws", tags=["websocket"])
 
@@ -22,11 +23,12 @@ async def websocket_events(websocket: WebSocket) -> None:
     except Exception:
         pass
     finally:
-        _active_connections.remove(websocket)
+        with suppress(ValueError):
+            _active_connections.remove(websocket)
 
 
 async def broadcast_event(event: str, data: dict[str, Any]) -> None:
     """Broadcast an event to all connected dashboard clients."""
     for ws in _active_connections:
-        with suppress(Exception):
+        with suppress(WebSocketDisconnect, ConnectionError, OSError):
             await ws.send_json({"event": event, "data": data})

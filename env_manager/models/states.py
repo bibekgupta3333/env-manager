@@ -5,6 +5,7 @@ from enum import Enum
 
 class ManagementState(str, Enum):
     """What can I DO with this environment?"""
+
     CREATING = "creating"
     READY = "ready"
     UPDATING = "updating"
@@ -16,6 +17,7 @@ class ManagementState(str, Enum):
 
 class DiscoveryStatus(str, Enum):
     """What do I KNOW about this environment?"""
+
     UNTRACKED = "untracked"
     TRACKED = "tracked"
     IGNORED = "ignored"

@@ -3,7 +3,9 @@
 import os
 from pathlib import Path
 
-DEFAULT_DB_PATH = os.path.expanduser("~/.env-manager/envs.db")
+from env_manager.platform import default_db_path
+
+DEFAULT_DB_PATH = default_db_path()
 
 
 def get_db_path() -> str:
